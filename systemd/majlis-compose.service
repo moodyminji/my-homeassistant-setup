@@ -1,0 +1,16 @@
+[Unit]
+Description=Majlis Docker Compose stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/moodyminji/majlis
+ExecStart=/usr/bin/docker compose up -d
+User=moodyminji
+Group=moodyminji
+
+[Install]
+WantedBy=multi-user.target
