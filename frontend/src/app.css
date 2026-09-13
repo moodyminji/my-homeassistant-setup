@@ -46,6 +46,28 @@ button {
   border-radius: 8px;
 }
 
+/* Shared tile primitives — ported from the reference. Global rather than
+   per-component so every tile is literally the same rule. */
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 16px;
+  box-shadow: var(--sh);
+  position: relative;
+  min-width: 0;
+}
+.tile .lbl {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.span2 { grid-column: span 2; }
+.span4 { grid-column: span 4; }
+.row2 { grid-row: span 2; }
+
 /* Kiosk polish (DESIGN.md §6) — wall panels run this fullscreen, so the page
    itself never scrolls; overflow lives inside <main>. */
 html, body {

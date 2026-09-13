@@ -4,14 +4,40 @@
   import TopBar from "./lib/components/TopBar.svelte";
   import RoomTabs from "./lib/components/RoomTabs.svelte";
   import ClimateTile from "./lib/components/ClimateTile.svelte";
+  import LightTile from "./lib/components/LightTile.svelte";
+  import DeviceTile from "./lib/components/DeviceTile.svelte";
+  import CameraTile from "./lib/components/CameraTile.svelte";
+  import EnergyTile from "./lib/components/EnergyTile.svelte";
+  import StatTile from "./lib/components/StatTile.svelte";
+  import SceneRow from "./lib/components/SceneRow.svelte";
   import { startHomeAssistant, connectionState, entities, areaGroups, config } from "./lib/ha/stores";
   import { callService } from "./lib/ha/service";
+  import { haBaseUrl } from "./lib/ha/connection";
   import { findClimateEntity, toClimateView, hvacModeFor, type Mode } from "./lib/ha/climate";
-  import { DEMO_ROOMS, DEMO_WEATHER, DEMO_STATUS } from "./lib/demo";
+  import {
+    lightsIn,
+    devicesIn,
+    cameraIn,
+    energyIn,
+    airQualityIn,
+    waterHeaterIn,
+    scenesIn,
+    deviceService,
+  } from "./lib/ha/entities";
+  import {
+    DEMO_ROOMS,
+    DEMO_WEATHER,
+    DEMO_STATUS,
+    DEMO_ENERGY,
+    DEMO_STATS,
+    DEMO_SCENES,
+    DEMO_ACTIVE_SCENE,
+  } from "./lib/demo";
 
   const isDemo = new URLSearchParams(window.location.search).has("demo");
 
   let activeRoomId: string | null = null;
+  let activeSceneId: string | null = isDemo ? DEMO_ACTIVE_SCENE : null;
 
   onMount(() => {
     if (!isDemo) startHomeAssistant();
@@ -27,22 +53,29 @@
       }));
 
   $: if (activeRoomId === null && rooms.length > 0) activeRoomId = rooms[0].id;
-
   $: activeRoomName = rooms.find((r) => r.id === activeRoomId)?.name ?? "Home";
 
+  $: activeGroup = $areaGroups.find((g) => g.area.area_id === activeRoomId) ?? null;
+  $: roomEntities = activeGroup?.entities ?? {};
+  $: demoRoom = DEMO_ROOMS.find((r) => r.id === activeRoomId) ?? null;
+
   // --- climate -----------------------------------------------------------
-  // Demo interactions are local so the dial actually responds while reviewing.
+  // Demo interactions are local so controls actually respond while reviewing.
   let demoState = Object.fromEntries(
     DEMO_ROOMS.map((r) => [r.id, { target: r.climate.target, mode: r.climate.mode, on: r.climate.on }]),
   );
+  let demoLights = Object.fromEntries(
+    DEMO_ROOMS.flatMap((r) => r.lights.map((l) => [l.entityId, l.brightness])),
+  );
+  let demoDevices = Object.fromEntries(
+    DEMO_ROOMS.flatMap((r) => r.devices.map((d) => [d.entityId, d.active])),
+  );
 
-  $: activeGroup = $areaGroups.find((g) => g.area.area_id === activeRoomId) ?? null;
-  $: climateEntity = activeGroup ? findClimateEntity(activeGroup.entities) : null;
+  $: climateEntity = findClimateEntity(roomEntities);
   $: liveClimate = climateEntity ? toClimateView(climateEntity) : null;
 
-  $: demoRoom = DEMO_ROOMS.find((r) => r.id === activeRoomId) ?? null;
-  $: demoClimate =
-    demoRoom && activeRoomId
+  $: climate =
+    isDemo && demoRoom && activeRoomId
       ? {
           name: demoRoom.climate.name,
           target: demoState[activeRoomId].target,
@@ -54,9 +87,7 @@
           on: demoState[activeRoomId].on,
           availableModes: ["Cooling", "Fan", "Dry", "Auto"] as Mode[],
         }
-      : null;
-
-  $: climate = isDemo ? demoClimate : liveClimate;
+      : liveClimate;
 
   function setPower(next: boolean) {
     if (isDemo && activeRoomId) {
@@ -88,6 +119,71 @@
     callService("climate", "set_hvac_mode", { hvac_mode: hvacModeFor(next) }, { entity_id: liveClimate.entityId });
   }
 
+  // --- lights ------------------------------------------------------------
+  $: lights =
+    isDemo && demoRoom
+      ? demoRoom.lights.map((l) => ({ ...l, brightness: demoLights[l.entityId] }))
+      : lightsIn(roomEntities);
+
+  function setBrightness(entityId: string, pct: number) {
+    if (isDemo) {
+      demoLights[entityId] = pct;
+      demoLights = demoLights;
+      return;
+    }
+    if (pct <= 0) {
+      callService("light", "turn_off", {}, { entity_id: entityId });
+    } else {
+      callService("light", "turn_on", { brightness_pct: pct }, { entity_id: entityId });
+    }
+  }
+
+  // --- devices -----------------------------------------------------------
+  $: devices =
+    isDemo && demoRoom
+      ? demoRoom.devices.map((d) => {
+          const active = demoDevices[d.entityId];
+          return { ...d, active, stateText: active ? d.onText : d.offText };
+        })
+      : devicesIn(roomEntities);
+
+  function toggleDevice(entityId: string, next: boolean) {
+    if (isDemo) {
+      demoDevices[entityId] = next;
+      demoDevices = demoDevices;
+      return;
+    }
+    const call = deviceService(entityId, next);
+    if (call) callService(call.domain, call.service, {}, { entity_id: entityId });
+  }
+
+  // --- camera / energy / stats / scenes ----------------------------------
+  $: camera =
+    isDemo && demoRoom
+      ? demoRoom.camera
+        ? { ...demoRoom.camera, snapshot: null }
+        : null
+      : (() => {
+          const c = cameraIn(roomEntities, haBaseUrl);
+          return c ? { ...c, detection: null } : null;
+        })();
+
+  $: energy = isDemo ? DEMO_ENERGY : (() => {
+    const e = energyIn($entities);
+    return e ? { ...e, points: [] as number[] } : null;
+  })();
+
+  $: stats = isDemo
+    ? DEMO_STATS
+    : [airQualityIn(roomEntities), waterHeaterIn(roomEntities)].filter((s) => s !== null);
+
+  $: scenes = isDemo ? DEMO_SCENES : scenesIn($entities);
+
+  function activateScene(id: string) {
+    activeSceneId = id;
+    if (!isDemo) callService("scene", "turn_on", {}, { entity_id: id });
+  }
+
   // --- top bar -----------------------------------------------------------
   $: weatherEntity = Object.values($entities).find((e) => e.entity_id.startsWith("weather."));
 
@@ -104,10 +200,7 @@
 
   $: statusText = isDemo ? DEMO_STATUS : liveStatus($areaGroups, $entities);
 
-  function liveStatus(
-    groups: typeof $areaGroups,
-    all: typeof $entities,
-  ): string {
+  function liveStatus(groups: typeof $areaGroups, all: typeof $entities): string {
     const parts: string[] = [];
 
     const activeRooms = groups.filter((g) =>
@@ -171,13 +264,53 @@
             on:target={(e) => setTarget(e.detail)}
             on:mode={(e) => setMode(e.detail)}
           />
-        {:else}
-          <div class="tile notice span2">
-            <div class="lbl">Climate</div>
-            <p>No climate entity assigned to {activeRoomName}.</p>
-          </div>
         {/if}
+
+        {#each lights as light (light.entityId)}
+          <LightTile
+            name={light.name}
+            brightness={light.brightness}
+            descriptor={light.descriptor}
+            on:brightness={(e) => setBrightness(light.entityId, e.detail)}
+          />
+        {/each}
+
+        {#if camera}
+          <CameraTile
+            name={camera.name}
+            statusText={camera.statusText}
+            snapshot={camera.snapshot}
+            detection={camera.detection}
+          />
+        {/if}
+
+        {#each devices as device (device.entityId)}
+          <DeviceTile
+            name={device.name}
+            stateText={device.stateText}
+            active={device.active}
+            icon={device.icon}
+            on:toggle={(e) => toggleDevice(device.entityId, e.detail)}
+          />
+        {/each}
+
+        {#if energy}
+          <EnergyTile
+            value={energy.value}
+            unit={energy.unit}
+            delta={energy.delta}
+            points={energy.points}
+          />
+        {/if}
+
+        {#each stats as stat (stat.label)}
+          <StatTile label={stat.label} value={stat.value} detail={stat.detail} />
+        {/each}
       </div>
+
+      {#if scenes.length > 0}
+        <SceneRow {scenes} activeId={activeSceneId} on:activate={(e) => activateScene(e.detail)} />
+      {/if}
     {/if}
   </main>
 </div>
@@ -207,23 +340,6 @@
     grid-auto-rows: minmax(10px, auto);
   }
 
-  .tile {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--r);
-    padding: 16px;
-    box-shadow: var(--sh);
-    position: relative;
-    min-width: 0;
-  }
-  .lbl {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--faint);
-  }
-
   .notice { grid-column: span 2; }
   .notice p { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
   .notice code {
@@ -233,7 +349,6 @@
     padding: 1px 5px;
     border-radius: 6px;
   }
-  .span2 { grid-column: span 2; }
 
   @media (max-width: 1023px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
@@ -243,6 +358,6 @@
     .app { grid-template-columns: 1fr; }
     main { padding-bottom: 80px; }
     .grid { grid-template-columns: 1fr; }
-    .notice, .span2 { grid-column: span 1; }
+    .notice { grid-column: span 1; }
   }
 </style>

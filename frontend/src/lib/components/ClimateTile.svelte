@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
   import Toggle from "./Toggle.svelte";
   import type { Mode } from "../ha/climate";
 
@@ -36,15 +36,34 @@
   const CIRC = 2 * Math.PI * R;
   const VISIBLE = CIRC * 0.75;
 
-  $: frac = maxTemp > minTemp ? (target - minTemp) / (maxTemp - minTemp) : 0;
+  // Taps land faster than HA (or the parent) echoes the new target back, so
+  // steps accumulate against an optimistic local value instead of the last
+  // rendered one — otherwise two quick taps both produce the same result.
+  let pending: number | null = null;
+  let pendingTimer: ReturnType<typeof setTimeout> | undefined;
+
+  $: if (pending !== null && target === pending) {
+    pending = null;
+    clearTimeout(pendingTimer);
+  }
+
+  $: shown = pending ?? target;
+  $: frac = maxTemp > minTemp ? (shown - minTemp) / (maxTemp - minTemp) : 0;
   $: dashoffset = VISIBLE * (1 - Math.min(Math.max(frac, 0), 1));
   $: arcColor =
     mode === "Fan" ? "var(--accent)" : mode === "Dry" ? "var(--heat)" : "var(--cool)";
   $: chips = CHIPS.filter((c) => availableModes.includes(c.mode));
 
+  onDestroy(() => clearTimeout(pendingTimer));
+
   function step(delta: number) {
-    const next = target + delta;
-    if (next >= minTemp && next <= maxTemp) dispatch("target", next);
+    const next = (pending ?? target) + delta;
+    if (next < minTemp || next > maxTemp) return;
+    pending = next;
+    clearTimeout(pendingTimer);
+    // Never strand the dial out of sync if the command is never acknowledged.
+    pendingTimer = setTimeout(() => (pending = null), 3000);
+    dispatch("target", next);
   }
 </script>
 
@@ -74,7 +93,7 @@
       />
     </svg>
     <div class="dialtxt">
-      <div class="t">{target}<sup>°C</sup></div>
+      <div class="t">{shown}<sup>°C</sup></div>
       <div class="mode" style:color={arcColor}>{on ? mode : "Off"}</div>
     </div>
   </div>

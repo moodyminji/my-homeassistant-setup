@@ -3,6 +3,9 @@
 
   export let checked = false;
   export let label = "Toggle";
+  /** false renders it as pure decoration — for tiles where the whole tile is
+   *  already the switch, so we don't nest interactive controls. */
+  export let interactive = true;
 
   const dispatch = createEventDispatcher<{ change: boolean }>();
 
@@ -19,16 +22,20 @@
   }
 </script>
 
-<span
-  class="tog"
-  class:active={checked}
-  role="switch"
-  aria-checked={checked}
-  aria-label={label}
-  tabindex="0"
-  on:click={fire}
-  on:keydown={onKey}
-></span>
+{#if interactive}
+  <span
+    class="tog"
+    class:active={checked}
+    role="switch"
+    aria-checked={checked}
+    aria-label={label}
+    tabindex="0"
+    on:click={fire}
+    on:keydown={onKey}
+  ></span>
+{:else}
+  <span class="tog" class:active={checked} aria-hidden="true"></span>
+{/if}
 
 <style>
   /* Reference sizes it 46×27 with a 21px knob; DESIGN.md §6 requires ≥46×28
