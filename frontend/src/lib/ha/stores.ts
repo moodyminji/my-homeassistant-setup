@@ -1,5 +1,10 @@
 import { derived, writable, type Readable } from "svelte/store";
-import { subscribeEntities, type HassEntities } from "home-assistant-js-websocket";
+import {
+  getConfig,
+  subscribeEntities,
+  type HassConfig,
+  type HassEntities,
+} from "home-assistant-js-websocket";
 import { getConnection } from "./connection";
 import {
   fetchAreaRegistry,
@@ -21,6 +26,7 @@ type Registries = {
 export const connectionState = writable<ConnectionState>("connecting");
 export const entities = writable<HassEntities>({});
 export const registries = writable<Registries | null>(null);
+export const config = writable<HassConfig | null>(null);
 
 let started = false;
 
@@ -38,12 +44,14 @@ export async function startHomeAssistant(): Promise<void> {
 
     subscribeEntities(conn, (state) => entities.set(state));
 
-    const [areas, devices, entityRegistry] = await Promise.all([
+    const [areas, devices, entityRegistry, haConfig] = await Promise.all([
       fetchAreaRegistry(conn),
       fetchDeviceRegistry(conn),
       fetchEntityRegistry(conn),
+      getConfig(conn),
     ]);
     registries.set({ areas, devices, entityRegistry });
+    config.set(haConfig);
   } catch (err) {
     console.error("Failed to connect to Home Assistant", err);
     connectionState.set("error");

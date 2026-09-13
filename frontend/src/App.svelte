@@ -1,186 +1,248 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { startHomeAssistant, connectionState, areaGroups } from "./lib/ha/stores";
+  import NavRail from "./lib/components/NavRail.svelte";
+  import TopBar from "./lib/components/TopBar.svelte";
+  import RoomTabs from "./lib/components/RoomTabs.svelte";
+  import ClimateTile from "./lib/components/ClimateTile.svelte";
+  import { startHomeAssistant, connectionState, entities, areaGroups, config } from "./lib/ha/stores";
   import { callService } from "./lib/ha/service";
+  import { findClimateEntity, toClimateView, hvacModeFor, type Mode } from "./lib/ha/climate";
+  import { DEMO_ROOMS, DEMO_WEATHER, DEMO_STATUS } from "./lib/demo";
 
-  let activeAreaId: string | null = null;
+  const isDemo = new URLSearchParams(window.location.search).has("demo");
+
+  let activeRoomId: string | null = null;
 
   onMount(() => {
-    startHomeAssistant();
+    if (!isDemo) startHomeAssistant();
   });
 
-  $: if (activeAreaId === null && $areaGroups.length > 0) {
-    activeAreaId = $areaGroups[0].area.area_id;
+  // --- rooms -------------------------------------------------------------
+  $: rooms = isDemo
+    ? DEMO_ROOMS.map((r) => ({ id: r.id, name: r.name, count: r.count }))
+    : $areaGroups.map((g) => ({
+        id: g.area.area_id,
+        name: g.area.name,
+        count: Object.keys(g.entities).length,
+      }));
+
+  $: if (activeRoomId === null && rooms.length > 0) activeRoomId = rooms[0].id;
+
+  $: activeRoomName = rooms.find((r) => r.id === activeRoomId)?.name ?? "Home";
+
+  // --- climate -----------------------------------------------------------
+  // Demo interactions are local so the dial actually responds while reviewing.
+  let demoState = Object.fromEntries(
+    DEMO_ROOMS.map((r) => [r.id, { target: r.climate.target, mode: r.climate.mode, on: r.climate.on }]),
+  );
+
+  $: activeGroup = $areaGroups.find((g) => g.area.area_id === activeRoomId) ?? null;
+  $: climateEntity = activeGroup ? findClimateEntity(activeGroup.entities) : null;
+  $: liveClimate = climateEntity ? toClimateView(climateEntity) : null;
+
+  $: demoRoom = DEMO_ROOMS.find((r) => r.id === activeRoomId) ?? null;
+  $: demoClimate =
+    demoRoom && activeRoomId
+      ? {
+          name: demoRoom.climate.name,
+          target: demoState[activeRoomId].target,
+          minTemp: 16,
+          maxTemp: 30,
+          current: demoRoom.climate.current,
+          humidity: demoRoom.climate.humidity,
+          mode: demoState[activeRoomId].mode,
+          on: demoState[activeRoomId].on,
+          availableModes: ["Cooling", "Fan", "Dry", "Auto"] as Mode[],
+        }
+      : null;
+
+  $: climate = isDemo ? demoClimate : liveClimate;
+
+  function setPower(next: boolean) {
+    if (isDemo && activeRoomId) {
+      demoState[activeRoomId].on = next;
+      demoState = demoState;
+      return;
+    }
+    if (!liveClimate) return;
+    callService("climate", next ? "turn_on" : "turn_off", {}, { entity_id: liveClimate.entityId });
   }
 
-  $: activeGroup = $areaGroups.find((g) => g.area.area_id === activeAreaId) ?? null;
+  function setTarget(next: number) {
+    if (isDemo && activeRoomId) {
+      demoState[activeRoomId].target = next;
+      demoState = demoState;
+      return;
+    }
+    if (!liveClimate) return;
+    callService("climate", "set_temperature", { temperature: next }, { entity_id: liveClimate.entityId });
+  }
 
-  function toggle(entityId: string, currentState: string) {
-    const domain = entityId.split(".")[0];
-    const turnOn = currentState !== "on";
-    callService(domain, turnOn ? "turn_on" : "turn_off", {}, { entity_id: entityId });
+  function setMode(next: Mode) {
+    if (isDemo && activeRoomId) {
+      demoState[activeRoomId].mode = next;
+      demoState = demoState;
+      return;
+    }
+    if (!liveClimate) return;
+    callService("climate", "set_hvac_mode", { hvac_mode: hvacModeFor(next) }, { entity_id: liveClimate.entityId });
+  }
+
+  // --- top bar -----------------------------------------------------------
+  $: weatherEntity = Object.values($entities).find((e) => e.entity_id.startsWith("weather."));
+
+  $: weather = isDemo
+    ? DEMO_WEATHER
+    : {
+        temp:
+          typeof weatherEntity?.attributes.temperature === "number"
+            ? `${Math.round(weatherEntity.attributes.temperature)}°`
+            : null,
+        place: $config?.location_name ?? "",
+        condition: weatherEntity?.state ?? "",
+      };
+
+  $: statusText = isDemo ? DEMO_STATUS : liveStatus($areaGroups, $entities);
+
+  function liveStatus(
+    groups: typeof $areaGroups,
+    all: typeof $entities,
+  ): string {
+    const parts: string[] = [];
+
+    const activeRooms = groups.filter((g) =>
+      Object.values(g.entities).some((e) => e.state === "on"),
+    ).length;
+    if (activeRooms > 0) parts.push(`${activeRooms} room${activeRooms === 1 ? "" : "s"} active`);
+
+    const locks = Object.values(all).filter((e) => e.entity_id.startsWith("lock."));
+    if (locks.length > 0) {
+      const unlocked = locks.filter((l) => l.state !== "locked").length;
+      parts.push(unlocked === 0 ? "everything's locked up" : `${unlocked} unlocked`);
+    }
+
+    return parts.join(" · ");
   }
 </script>
 
-<main>
-  <header>
-    <h1>Majlis Control</h1>
-    <span class="status status-{$connectionState}">{$connectionState}</span>
-  </header>
+<div class="app">
+  <NavRail />
 
-  {#if $areaGroups.length === 0}
-    <p class="empty">
-      No areas configured in Home Assistant yet. Create rooms/floors as
-      "areas" in HA and assign devices to them — they'll appear here
-      automatically, no code change needed.
-    </p>
-  {:else}
-    <nav class="area-tabs">
-      {#each $areaGroups as group (group.area.area_id)}
-        <button
-          class="tab"
-          class:active={group.area.area_id === activeAreaId}
-          on:click={() => (activeAreaId = group.area.area_id)}
-        >
-          {group.area.name}
-        </button>
-      {/each}
-    </nav>
+  <main>
+    <TopBar
+      title={activeRoomName}
+      {statusText}
+      weatherTemp={weather.temp}
+      weatherPlace={weather.place}
+      weatherCondition={weather.condition}
+    />
 
-    {#if activeGroup}
-      <section class="area">
-        {#if Object.keys(activeGroup.entities).length === 0}
-          <p class="empty">
-            No entities assigned to "{activeGroup.area.name}" yet.
-          </p>
+    {#if rooms.length === 0}
+      <div class="tile notice">
+        <div class="lbl">No areas yet</div>
+        <p>
+          {#if $connectionState === "error"}
+            Can't reach Home Assistant — check <code>VITE_HA_URL</code> and
+            <code>VITE_HA_TOKEN</code> in <code>frontend/.env.local</code>.
+          {:else}
+            Home Assistant has no areas configured. Create rooms as areas in HA
+            and assign devices to them — they'll appear here automatically.
+            To preview the design against the reference in the meantime, open
+            <code>?demo=1</code>.
+          {/if}
+        </p>
+      </div>
+    {:else}
+      <RoomTabs {rooms} bind:activeId={activeRoomId} />
+
+      <div class="grid">
+        {#if climate}
+          <ClimateTile
+            name={climate.name}
+            target={climate.target}
+            minTemp={climate.minTemp}
+            maxTemp={climate.maxTemp}
+            current={climate.current}
+            humidity={climate.humidity}
+            mode={climate.mode}
+            on={climate.on}
+            availableModes={climate.availableModes}
+            on:power={(e) => setPower(e.detail)}
+            on:target={(e) => setTarget(e.detail)}
+            on:mode={(e) => setMode(e.detail)}
+          />
         {:else}
-          <div class="tiles">
-            {#each Object.values(activeGroup.entities) as entity (entity.entity_id)}
-              <button class="tile" on:click={() => toggle(entity.entity_id, entity.state)}>
-                <span class="name">{entity.attributes.friendly_name ?? entity.entity_id}</span>
-                <span class="state">{entity.state}</span>
-              </button>
-            {/each}
+          <div class="tile notice span2">
+            <div class="lbl">Climate</div>
+            <p>No climate entity assigned to {activeRoomName}.</p>
           </div>
         {/if}
-      </section>
+      </div>
     {/if}
-  {/if}
-</main>
+  </main>
+</div>
 
 <style>
-  main {
-    max-width: 720px;
+  .app {
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 24px 20px 48px;
-  }
-
-  header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .status {
-    font-family: var(--mono);
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 4px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    color: var(--text);
-  }
-  .status-connected {
-    color: var(--accent);
-    border-color: var(--accent-border);
-    background: var(--accent-bg);
-  }
-  .status-error {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.5);
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .empty {
-    margin-top: 24px;
-    color: var(--text);
-    line-height: 150%;
-  }
-
-  .area-tabs {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    margin-top: 24px;
-    padding-bottom: 4px;
-  }
-
-  .tab {
-    flex: none;
-    font: inherit;
-    color: var(--text);
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 6px 16px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition:
-      border-color 0.2s,
-      color 0.2s,
-      background 0.2s;
-  }
-  .tab:hover {
-    border-color: var(--accent-border);
-  }
-  .tab.active {
-    color: var(--accent);
-    border-color: var(--accent-border);
-    background: var(--accent-bg);
-  }
-
-  .area {
-    margin-top: 20px;
-    text-align: left;
-  }
-
-  .tiles {
+    height: 100dvh;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
+    grid-template-columns: 76px 1fr;
+    gap: 0;
+    padding: 0;
+  }
+
+  main {
+    padding: 22px 26px 34px;
+    min-width: 0;
+    /* Kiosk: the page never scrolls, overflow lives here (DESIGN.md §6). */
+    overflow-y: auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    grid-auto-rows: minmax(10px, auto);
   }
 
   .tile {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
     padding: 16px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--code-bg);
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition:
-      border-color 0.2s,
-      background 0.2s;
+    box-shadow: var(--sh);
+    position: relative;
+    min-width: 0;
   }
-  .tile:hover {
-    border-color: var(--accent-border);
-  }
-
-  .name {
-    font-weight: 500;
-    color: var(--text-h);
-  }
-
-  .state {
+  .lbl {
     font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 13px;
-    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .notice { grid-column: span 2; }
+  .notice p { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+  .notice code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--panel-2);
+    padding: 1px 5px;
+    border-radius: 6px;
+  }
+  .span2 { grid-column: span 2; }
+
+  @media (max-width: 1023px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 640px) {
+    .app { grid-template-columns: 1fr; }
+    main { padding-bottom: 80px; }
+    .grid { grid-template-columns: 1fr; }
+    .notice, .span2 { grid-column: span 1; }
   }
 </style>
