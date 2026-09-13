@@ -1,19 +1,21 @@
 # Majlis Frontend — Design Spec & Build Rules
 
-**This is the visual source of truth for the Majlis dashboard.** The companion
-file `majlis-dashboard-reference.html` is the approved mockup. Your job when
-building the frontend is to **reproduce that mockup faithfully** in the app
-stack — not to design something new. When in doubt, open the reference and match
-it pixel-for-pixel.
+**This is the visual source of truth for the Majlis frontend.** It is an
+**OS-style, multi-page system** — not a single dashboard. Two approved mockups:
+- `majlis-os-reference.html` — **primary**: the full OS shell + all pages (see §12).
+- `majlis-dashboard-reference.html` — the room-detail view, for close-up
+  component detail (climate dial, light tiles, camera tile, etc.).
+Your job is to **reproduce these faithfully** in the app stack — not to design
+something new. When in doubt, open the reference and match it pixel-for-pixel.
 
 > **Golden rule:** PORT the reference, don't reinvent it. Lift its exact colors,
 > fonts, spacing, radii, component structure, and interactions. If your output
-> doesn't look like `majlis-dashboard-reference.html`, it's wrong.
+> doesn't look like `majlis-os-reference.html`, it's wrong.
 
 ---
 
 ## 0. How to use this file
-1. Open `majlis-dashboard-reference.html` in a browser — that is the target.
+1. Open `majlis-os-reference.html` in a browser — that is the target (all pages).
 2. Copy the **design tokens** below verbatim into the app (CSS custom
    properties, or a theme file / Tailwind config).
 3. Build each component from §7 to match the reference's markup and states.
@@ -160,19 +162,60 @@ Design **tablet-first landscape**, since the wall panels are the primary target.
 
 ---
 
-## 11. Prompt to give Claude Code
-Paste this in the repo with both files present:
+## 11. Information architecture (the pages)
+The app is an **OS shell**: a persistent left **nav rail** switches between
+full pages (a client-side router; no full reloads). Match `majlis-os-reference.html`.
 
-> Read `frontend/DESIGN.md` and open `frontend/design-reference/majlis-dashboard-reference.html`.
-> Build the dashboard in our Svelte + Vite PWA as a **faithful port** of that
-> reference — same layout, tokens, components, and interactions. Copy the design
-> tokens verbatim into a theme file and style everything through them (dark
-> default + light theme + toggle). It must be **tablet-first**: 4-col grid at
-> ≥1024px, 2-col at 640–1023px, single column ≤640px; all touch targets ≥44px;
-> no page scroll in kiosk; slider thumbs ≥28px. Componentize (NavRail, TopBar,
-> RoomTabs, ClimateTile, LightTile, DeviceTile, CameraTile, EnergyTile,
-> SceneRow) but keep each visually identical to the reference. Wire real HA
-> entities via home-assistant-js-websocket per CLAUDE.md §6, rendering by area.
-> Do NOT redesign or "improve" the look — if it doesn't match the reference,
-> it's wrong. Show me the ClimateTile and one room first for approval before
-> building the rest.
+Two structural rules:
+- **Home is a launcher, not a mirror of Rooms.** It shows only pinned +
+  suggested + summaries — never a wall of every device.
+- **Devices ≠ Rooms.** The same entity can appear in both, but a
+  multi-function device's *full* control set lives only in Devices, so Rooms
+  stays glanceable.
+
+Pages (rail order):
+1. **Home** — greeting + outdoor temp; **Favorites** (pinned quick-controls);
+   **Suggested** (context/time-aware actions); **Power** summary card (live draw,
+   today, top consumers, sparkline); **Scenes** row; **Apps** shortcut strip.
+2. **Rooms** — floor tabs → room tabs → that room's devices (climate dial,
+   light tiles, device tiles). This is where the dashboard-reference detail lives.
+3. **Devices** — search + type filters; flat list grouped by type (Lights,
+   Climate & Fans, Plugs & Sensors, Locks, Covers…). Multi-function devices
+   render an expanded control block (power / speed / light / oscillate, etc.).
+4. **Apps** — launcher grid of shortcuts to non-HA apps (media, comms, router,
+   CCTV app…), grouped; each opens on the tablet / in a browser. User-editable set.
+5. **Automations** — list of HA automations: enable/disable toggle, trigger
+   summary, last-run, run-now. HA owns the logic; this is the control surface.
+6. **Energy** — power stats: now / today / month / est. cost tiles, a 7-day bar
+   chart, breakdown by area.
+7. **Security** — arm Home/Night/Away, Frigate camera wall, door & sensor states.
+8. **Intercom** — "page the whole house" + per-panel call buttons + door-station
+   ring. WebRTC (CLAUDE.md §7).
+9. **Settings** — theme, per-panel config (assigned floor, screen-dim, kiosk
+   lock) and **host health** (CPU/RAM/uptime of the Majlis host).
+
+Each page uses the same tokens and component vocabulary (§7); build shared
+components once and reuse across pages.
+
+## 12. Prompt to give Claude Code
+Paste this in the repo with the reference files present
+(`frontend/design-reference/majlis-os-reference.html` and
+`frontend/design-reference/majlis-dashboard-reference.html`):
+
+> Read `frontend/DESIGN.md` and open
+> `frontend/design-reference/majlis-os-reference.html`. Build the **Majlis OS**
+> in our Svelte + Vite PWA as a **faithful port** of that reference: a persistent
+> left **NavRail** + a client-side page router with all nine pages (Home, Rooms,
+> Devices, Apps, Automations, Energy, Security, Intercom, Settings) per §11.
+> Copy the design tokens (§1–2) verbatim into one theme file and style everything
+> through them (dark default + light theme + toggle). **Tablet-first**: full grid
+> ≥1024px, 2-col 640–1023px, single column ≤640px (rail → bottom bar); all touch
+> targets ≥44px; slider thumbs ≥28px; no page scroll inside a page in kiosk.
+> Componentize (NavRail, TopBar, ClimateTile, LightTile, DeviceTile, CameraTile,
+> EnergyTile, SceneRow, QuickControl, AppTile, AutomationRow…) and reuse across
+> pages, each visually identical to the reference. Keep Home a launcher (pinned +
+> suggested only) and Devices separate from Rooms per §11's two rules. Wire real
+> HA entities via home-assistant-js-websocket per CLAUDE.md §6, rendering by area.
+> Do NOT redesign or "improve" the look. **Build in this order, pausing for my
+> approval after each:** (1) shell + NavRail + router + theme, (2) Home page,
+> (3) Rooms page. Then we'll continue with the rest.

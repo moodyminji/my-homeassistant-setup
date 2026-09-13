@@ -1,6 +1,6 @@
-/* Design tokens — copied verbatim from majlis-dashboard-reference.html.
-   Every color in the app comes from these; never hard-code a hex in a
-   component. See DESIGN.md §1/§2. */
+/* Design tokens — copied verbatim from majlis-os-reference.html (the primary
+   reference). Every color in the app comes from these; never hard-code a hex
+   in a component. See DESIGN_1.md §1/§2. */
 
 :root {
   /* dark-first control panel */
@@ -11,7 +11,7 @@
   --on:#3fd08a; --on-ghost:#3fd08a1c;
   --heat:#f0a34b; --heat-ghost:#f0a34b22;
   --cool:#4aa8f0; --cool-ghost:#4aa8f022;
-  --alert:#ef6b81;
+  --alert:#ef6b81; --alert-ghost:#ef6b8122;
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
   --disp:"Archivo",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -27,7 +27,7 @@
   --on:#20a065; --on-ghost:#20a06516;
   --heat:#d4842a; --heat-ghost:#d4842a18;
   --cool:#2f86d4; --cool-ghost:#2f86d418;
-  --alert:#c94a60;
+  --alert:#c94a60; --alert-ghost:#c94a6018;
   --sh:0 1px 2px rgba(18,33,32,.06),0 10px 26px rgba(18,33,32,.08);
 }
 
@@ -40,7 +40,7 @@
     --on:#20a065; --on-ghost:#20a06516;
     --heat:#d4842a; --heat-ghost:#d4842a18;
     --cool:#2f86d4; --cool-ghost:#2f86d418;
-    --alert:#c94a60;
+    --alert:#c94a60; --alert-ghost:#c94a6018;
     --sh:0 1px 2px rgba(18,33,32,.06),0 10px 26px rgba(18,33,32,.08);
   }
 }

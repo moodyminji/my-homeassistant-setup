@@ -11,16 +11,24 @@
 @import "@fontsource/ibm-plex-mono/600.css";
 @import "./lib/theme.css";
 
-/* Base — ported from majlis-dashboard-reference.html */
+/* Base — ported from majlis-os-reference.html */
 * { box-sizing: border-box; }
+
+html, body { height: 100%; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
-  -webkit-font-smoothing: antialiased;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Kiosk: the page itself never scrolls — .view is the scroll container. */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -29,7 +37,7 @@ h1, h2, h3, h4 {
   font-family: var(--disp);
   margin: 0;
   letter-spacing: -.02em;
-  line-height: 1.1;
+  line-height: 1.12;
 }
 
 button {
@@ -46,41 +54,68 @@ button {
   border-radius: 8px;
 }
 
-/* Shared tile primitives — ported from the reference. Global rather than
-   per-component so every tile is literally the same rule. */
+/* Shared primitives used across pages — global so every page gets literally
+   the same rule rather than a scoped copy. */
 .tile {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r);
   padding: 16px;
   box-shadow: var(--sh);
-  position: relative;
   min-width: 0;
 }
-.tile .lbl {
+
+.lbl {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--faint);
 }
-.span2 { grid-column: span 2; }
-.span4 { grid-column: span 4; }
-.row2 { grid-row: span 2; }
 
-/* Kiosk polish (DESIGN.md §6) — wall panels run this fullscreen, so the page
-   itself never scrolls; overflow lives inside <main>. */
-html, body {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
+/* section headers */
+.sec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24px 0 12px;
 }
+.sec:first-of-type { margin-top: 0; }
+.sec h2 { font-size: 16px; font-weight: 700; }
+.sec .lbl {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.sec .lnk { font-size: 13px; color: var(--accent); font-weight: 600; }
 
-body {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
+/* pill tabs (floors, rooms, device filters) */
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
 }
+.tab {
+  flex: none;
+  padding: 8px 15px;
+  border-radius: 99px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: .14s;
+  /* DESIGN_1.md §6: tappable at arm's length. */
+  min-height: 44px;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.floors .tab.on { background: var(--accent); border-color: var(--accent); color: #04211f; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
