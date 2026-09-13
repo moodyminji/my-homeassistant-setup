@@ -1,0 +1,59 @@
+:root {
+  /* Palette per Claude.md §10 — teal accent, deep blue-green neutrals */
+  --text: #4b5f60;
+  --text-h: #06231f;
+  --bg: #fff;
+  --border: #d7e4e3;
+  --code-bg: #f0f6f5;
+  --accent: #0d7c7e;
+  --accent-bg: rgba(13, 124, 126, 0.08);
+  --accent-border: rgba(13, 124, 126, 0.4);
+
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --heading: "Archivo", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  font: 16px/145% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9fb3b2;
+    --text-h: #eaf5f4;
+    --bg: #0b1615;
+    --border: #1e2f2d;
+    --code-bg: #10201e;
+    --accent: #25c6bb;
+    --accent-bg: rgba(37, 198, 187, 0.12);
+    --accent-border: rgba(37, 198, 187, 0.45);
+  }
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}

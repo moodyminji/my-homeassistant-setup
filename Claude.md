@@ -21,9 +21,15 @@ one later must not touch a line of UI code. Anything that reaches around HA to a
 device API is a design smell.
 
 ## 3. Infrastructure
-- **Host:** repurposed Lenovo IdeaPad 3 — i3 10th-gen, 6 GB RAM, 256 GB SSD.
-  Headless **Ubuntu Server (LTS)**. Laptop battery = built-in UPS. Lid-close set to ignore
-  so it runs closed. Reached at `majlis.local` (DHCP-reserved IP).
+- **Host:** repurposed Lenovo IdeaPad 3 — i3 10th-gen, headless
+  **Ubuntu Server (LTS)** (actual RAM on the deployed box is ~3.3 GB, not
+  6 GB — keep new services lean). Laptop battery = built-in UPS. Lid-close
+  set to ignore so it runs closed. Hostname is `majlis`, but **reach it by its
+  DHCP-reserved IP, `192.168.100.199`, not `majlis.local`** — the ISP-locked
+  router (Huawei HG8245W5) doesn't forward mDNS multicast between its Wi-Fi
+  and wired segments and exposes no IGMP proxy/multicast-forwarding setting
+  to fix it, so `.local` resolution never reaches other devices on the LAN
+  even though avahi is running correctly on the host itself.
 - **Runtime:** Docker + Docker Compose — deliberately NOT HAOS, so my UI and
   intercom are just more containers beside HA. One `docker-compose.yml` is the
   source of truth for the whole stack.
@@ -149,14 +155,30 @@ Build the frontend to match its feel:
   (pill/among/stripe) as well as text; responsive down to phone width.
 
 ## 11. Current state
-- Host setup in progress (Debian + Docker install; runbook exists). First
-  milestone: HA container running and reachable at `http://majlis.local:8123`.
+- Host is up: Ubuntu Server, Docker + Compose, hostname `majlis`. Repo is
+  git-initialized at `~/majlis` with `homeassistant` + `mosquitto` running via
+  `docker-compose.yml`. Reach HA at `http://192.168.100.199:8123` (see §3 for
+  why `majlis.local` doesn't work). HA onboarding is complete (admin account
+  created). Mosquitto has an authenticated listener (`allow_anonymous false`);
+  credentials known only to the user, not stored in the repo.
+- `zigbee2mqtt` is defined in `docker-compose.yml` but not started — no
+  coordinator dongle plugged in yet. `ZIGBEE_DONGLE_PATH` in `.env` is a
+  placeholder until then.
+- `frontend/` is scaffolded: Vite + Svelte + TypeScript PWA, `home-assistant-js-websocket`
+  wired up via long-lived token auth (`frontend/.env.local`, gitignored — copy
+  from `.env.local.example`), entities grouped by HA area via
+  `src/lib/ha/stores.ts` (`entitiesForArea`). `App.svelte` currently renders
+  one area ("Majlis") end-to-end as tiles with toggle. No real devices/areas
+  exist in HA yet, so it currently renders the empty state.
+- `signaling/` not started yet.
 
 ## 12. Immediate next tasks (dev)
-1. Extend `docker-compose.yml`: add `mosquitto` (auth'd listener) + `zigbee2mqtt`
-   (dongle `by-id` passthrough, MQTT server config). Bring up, confirm Z2M UI.
-2. Scaffold `frontend/` (Vite + Svelte/React); wire `home-assistant-js-websocket`
-   with a long-lived token; render one area (Majlis) live end-to-end.
+1. ~~Extend `docker-compose.yml` with mosquitto + zigbee2mqtt.~~ Mosquitto
+   done; zigbee2mqtt is waiting on the coordinator dongle.
+2. ~~Scaffold `frontend/`~~ done — next: verify live entity flow once a real
+   device/area exists in HA (`npm run dev` in `frontend/`, confirm a toggle
+   round-trips through HA), then start building out the real UI per §10's
+   design language (currently just minimal tiles, not the full mockup).
 3. Build the `signaling` Node server + a minimal WebRTC call between two panels.
 4. Onboard the first room fully as the reference pattern for the rest.
 
