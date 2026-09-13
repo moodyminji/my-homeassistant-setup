@@ -1,0 +1,41 @@
+# Home Assistant runtime (config structure is committed; runtime state is not)
+homeassistant/*
+!homeassistant/.gitkeep
+!homeassistant/configuration.yaml
+!homeassistant/automations.yaml
+!homeassistant/scripts.yaml
+!homeassistant/scenes.yaml
+homeassistant/secrets.yaml
+homeassistant/.storage/
+homeassistant/.cloud/
+homeassistant/*.db
+homeassistant/*.db-*
+homeassistant/*.log*
+homeassistant/tts/
+homeassistant/deps/
+homeassistant/image/
+
+# Mosquitto runtime
+mosquitto/config/passwd
+mosquitto/data/*
+mosquitto/log/*
+!mosquitto/data/.gitkeep
+!mosquitto/log/.gitkeep
+
+# Zigbee2MQTT runtime (config structure is committed; state/coordinator backups are not)
+zigbee2mqtt/data/*
+!zigbee2mqtt/data/.gitkeep
+!zigbee2mqtt/data/configuration.yaml
+
+# Secrets / env
+.env.secrets
+*.token
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.svelte-kit/
+
+# OS/editor
+.DS_Store
+*.swp

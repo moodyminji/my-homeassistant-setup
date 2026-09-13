@@ -1,0 +1,49 @@
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    # host networking is required for device discovery (mDNS/SSDP/DHCP) of
+    # local Wi-Fi and network devices
+    network_mode: host
+    # privileged is required for USB (Zigbee/Z-Wave dongle) and Bluetooth
+    # passthrough from the host
+    privileged: true
+    volumes:
+      - ./homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    environment:
+      - TZ=${TZ}
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    environment:
+      - TZ=${TZ}
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    volumes:
+      - ./zigbee2mqtt/data:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      # set ZIGBEE_DONGLE_PATH in .env to the coordinator's /dev/serial/by-id/...
+      # path once it's plugged in (see .env comment) before starting this service
+      - ${ZIGBEE_DONGLE_PATH}:/dev/ttyACM0
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=${TZ}
