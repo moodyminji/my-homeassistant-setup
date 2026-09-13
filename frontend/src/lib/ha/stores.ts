@@ -60,23 +60,33 @@ function areaIdForEntity(entityId: string, reg: Registries): string | null {
   return null;
 }
 
-// This is the scalability rule from Claude.md §2/§6 in code: entities are
-// grouped by whatever area they're assigned in HA, so a newly added device
-// shows up here with zero UI changes once it's assigned to the area.
-export function entitiesForArea(areaName: string): Readable<HassEntities> {
-  return derived([entities, registries], ([$entities, $registries]) => {
-    if (!$registries) return {};
-    const area = $registries.areas.find(
-      (a) => a.name.toLowerCase() === areaName.toLowerCase(),
-    );
-    if (!area) return {};
+export type AreaGroup = {
+  area: AreaRegistryEntry;
+  entities: HassEntities;
+};
 
-    const result: HassEntities = {};
+// This is the scalability rule from Claude.md §2/§6 in code: every area
+// defined in HA gets a group here, entities land in whichever one they're
+// assigned to, and a newly added device shows up with zero UI changes once
+// it's assigned to an area — no area name is ever hardcoded.
+export const areaGroups: Readable<AreaGroup[]> = derived(
+  [entities, registries],
+  ([$entities, $registries]) => {
+    if (!$registries) return [];
+
+    const byAreaId = new Map<string, HassEntities>();
+    for (const area of $registries.areas) {
+      byAreaId.set(area.area_id, {});
+    }
     for (const [entityId, state] of Object.entries($entities)) {
-      if (areaIdForEntity(entityId, $registries) === area.area_id) {
-        result[entityId] = state;
+      const areaId = areaIdForEntity(entityId, $registries);
+      if (areaId && byAreaId.has(areaId)) {
+        byAreaId.get(areaId)![entityId] = state;
       }
     }
-    return result;
-  });
-}
+
+    return $registries.areas
+      .map((area) => ({ area, entities: byAreaId.get(area.area_id)! }))
+      .sort((a, b) => a.area.name.localeCompare(b.area.name));
+  },
+);

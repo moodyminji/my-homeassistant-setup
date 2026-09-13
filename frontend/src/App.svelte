@@ -1,14 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { startHomeAssistant, connectionState, entitiesForArea } from "./lib/ha/stores";
+  import { startHomeAssistant, connectionState, areaGroups } from "./lib/ha/stores";
   import { callService } from "./lib/ha/service";
 
-  const AREA_NAME = "Majlis";
-  const areaEntities = entitiesForArea(AREA_NAME);
+  let activeAreaId: string | null = null;
 
   onMount(() => {
     startHomeAssistant();
   });
+
+  $: if (activeAreaId === null && $areaGroups.length > 0) {
+    activeAreaId = $areaGroups[0].area.area_id;
+  }
+
+  $: activeGroup = $areaGroups.find((g) => g.area.area_id === activeAreaId) ?? null;
 
   function toggle(entityId: string, currentState: string) {
     const domain = entityId.split(".")[0];
@@ -23,26 +28,44 @@
     <span class="status status-{$connectionState}">{$connectionState}</span>
   </header>
 
-  <section class="area">
-    <h2>{AREA_NAME}</h2>
+  {#if $areaGroups.length === 0}
+    <p class="empty">
+      No areas configured in Home Assistant yet. Create rooms/floors as
+      "areas" in HA and assign devices to them — they'll appear here
+      automatically, no code change needed.
+    </p>
+  {:else}
+    <nav class="area-tabs">
+      {#each $areaGroups as group (group.area.area_id)}
+        <button
+          class="tab"
+          class:active={group.area.area_id === activeAreaId}
+          on:click={() => (activeAreaId = group.area.area_id)}
+        >
+          {group.area.name}
+        </button>
+      {/each}
+    </nav>
 
-    {#if Object.keys($areaEntities).length === 0}
-      <p class="empty">
-        No entities assigned to the "{AREA_NAME}" area yet — assign a device to
-        it in Home Assistant and it will appear here automatically, no code
-        change needed.
-      </p>
-    {:else}
-      <div class="tiles">
-        {#each Object.values($areaEntities) as entity (entity.entity_id)}
-          <button class="tile" on:click={() => toggle(entity.entity_id, entity.state)}>
-            <span class="name">{entity.attributes.friendly_name ?? entity.entity_id}</span>
-            <span class="state">{entity.state}</span>
-          </button>
-        {/each}
-      </div>
+    {#if activeGroup}
+      <section class="area">
+        {#if Object.keys(activeGroup.entities).length === 0}
+          <p class="empty">
+            No entities assigned to "{activeGroup.area.name}" yet.
+          </p>
+        {:else}
+          <div class="tiles">
+            {#each Object.values(activeGroup.entities) as entity (entity.entity_id)}
+              <button class="tile" on:click={() => toggle(entity.entity_id, entity.state)}>
+                <span class="name">{entity.attributes.friendly_name ?? entity.entity_id}</span>
+                <span class="state">{entity.state}</span>
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </section>
     {/if}
-  </section>
+  {/if}
 </main>
 
 <style>
@@ -80,14 +103,47 @@
     background: rgba(239, 68, 68, 0.1);
   }
 
-  .area {
-    margin-top: 32px;
-    text-align: left;
-  }
-
   .empty {
+    margin-top: 24px;
     color: var(--text);
     line-height: 150%;
+  }
+
+  .area-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-top: 24px;
+    padding-bottom: 4px;
+  }
+
+  .tab {
+    flex: none;
+    font: inherit;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      border-color 0.2s,
+      color 0.2s,
+      background 0.2s;
+  }
+  .tab:hover {
+    border-color: var(--accent-border);
+  }
+  .tab.active {
+    color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-bg);
+  }
+
+  .area {
+    margin-top: 20px;
+    text-align: left;
   }
 
   .tiles {

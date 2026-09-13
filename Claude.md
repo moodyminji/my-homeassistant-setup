@@ -166,10 +166,12 @@ Build the frontend to match its feel:
   placeholder until then.
 - `frontend/` is scaffolded: Vite + Svelte + TypeScript PWA, `home-assistant-js-websocket`
   wired up via long-lived token auth (`frontend/.env.local`, gitignored — copy
-  from `.env.local.example`), entities grouped by HA area via
-  `src/lib/ha/stores.ts` (`entitiesForArea`). `App.svelte` currently renders
-  one area ("Majlis") end-to-end as tiles with toggle. No real devices/areas
-  exist in HA yet, so it currently renders the empty state.
+  from `.env.local.example`). Entities are grouped by HA area via
+  `src/lib/ha/stores.ts` (`areaGroups`) — **every area defined in HA gets a
+  tab, none hardcoded** (note: "Majlis" is this whole project's/house's name,
+  not a literal HA area — don't filter to an area called that). `App.svelte`
+  renders area tabs + tiles with toggle, live end-to-end. No areas are
+  configured in HA yet, so it currently renders the "no areas" empty state.
 - `signaling/` not started yet.
 
 ## 12. Immediate next tasks (dev)
