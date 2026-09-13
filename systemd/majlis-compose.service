@@ -8,7 +8,12 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/home/moodyminji/majlis
-ExecStart=/usr/bin/docker compose up -d
+# Explicit service list, not a bare "up -d": zigbee2mqtt isn't started yet
+# (ZIGBEE_DONGLE_PATH in .env is still a placeholder — no coordinator plugged
+# in). A bare "up -d" would fail the whole unit when that one service errors,
+# even though homeassistant/mosquitto came up fine. Add zigbee2mqtt to this
+# list once ZIGBEE_DONGLE_PATH is set for real.
+ExecStart=/usr/bin/docker compose up -d homeassistant mosquitto
 User=moodyminji
 Group=moodyminji
 
