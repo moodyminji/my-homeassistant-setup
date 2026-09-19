@@ -9,3 +9,22 @@ frontend:
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
+
+# Liquid-glass tablet dashboard: a YAML-mode dashboard kept in this repo
+# (homeassistant/dashboards/tablet.yaml), served at /tablet-glass. Edit the file, then just
+# refresh the tablet. Look = theme "Majlis Glass" (homeassistant/themes/majlis.yaml).
+lovelace:
+  dashboards:
+    tablet-glass:
+      mode: yaml
+      title: Tablet
+      icon: mdi:tablet-dashboard
+      show_in_sidebar: true
+      filename: dashboards/tablet.yaml
+
+# Search box behind the Rooms tab. Shared by all tablets (one text value for the house).
+input_text:
+  tablet_search:
+    name: Rooms search
+    icon: mdi:magnify
+    max: 60

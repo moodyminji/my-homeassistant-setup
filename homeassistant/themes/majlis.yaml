@@ -1,0 +1,64 @@
+# Majlis Glass — GRAPHITE palette (chosen 2026-09-20; see design/DESIGN.md for the older teal
+# tokens). Near-black, neutral glass cards, one warm amber accent. Colour is reserved for meaning:
+# amber = a light/switch is on (and the active tab), blue = cooling, green = locked.
+#
+# Select it per device in Profile -> Theme (the tablets); the Tablet dashboard also applies it
+# per view. Applied after: Developer tools -> YAML -> "Reload themes" (or an HA restart).
+#
+# The glass effect = translucent gradient fill + backdrop blur + a faint top edge + soft shadow.
+# The blur comes from card-mod (HACS plugin, installed).
+Majlis Glass:
+  # --- palette --------------------------------------------------------------
+  primary-color: "#ffb81a"
+  accent-color: "#ffb81a"
+  dark-primary-color: "#b37800"
+  light-primary-color: "#ffd98a"
+  primary-background-color: "#0c0d0f"
+  secondary-background-color: "rgba(255, 255, 255, 0.05)"
+  primary-text-color: "#eceff1"
+  secondary-text-color: "rgba(236, 239, 241, 0.58)"
+  disabled-text-color: "rgba(236, 239, 241, 0.32)"
+  divider-color: "rgba(255, 255, 255, 0.09)"
+  text-primary-color: "#241a00"
+
+  # --- backdrop: a quiet graphite gradient (no coloured glow) ----------------
+  lovelace-background: "linear-gradient(180deg, #0c0d0f 0%, #131518 60%, #0c0d0f 100%)"
+
+  # --- glass cards -----------------------------------------------------------
+  card-background-color: "rgba(255, 255, 255, 0.06)"
+  ha-card-background: "linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 100%)"
+  ha-card-border-radius: 22px
+  ha-card-border-width: 1px
+  ha-card-border-color: "rgba(255, 255, 255, 0.09)"
+  ha-card-box-shadow: "0 8px 22px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18)"
+  ha-card-backdrop-filter: none   # real blur comes from card-mod below
+
+  # --- header / tabs (hidden on the Tablet dashboard, kept for other dashboards) ---
+  app-header-background-color: "rgba(12, 13, 15, 0.7)"
+  app-header-text-color: "#eceff1"
+  app-header-selection-bar-color: "#ffb81a"
+
+  # --- state colours ---------------------------------------------------------
+  state-active-color: "#ffc14d"
+  state-switch-active-color: "#ffc14d"
+  state-light-active-color: "#ffc14d"
+  state-climate-cool-color: "#60a5fa"
+  state-climate-heat-color: "#ff9a3c"
+  state-climate-auto-color: "#ffc14d"
+  state-lock-locked-color: "#6edc8c"
+  state-lock-unlocked-color: "#ff7b72"
+
+  # --- controls --------------------------------------------------------------
+  switch-checked-color: "#ffb81a"
+  switch-checked-track-color: "rgba(255, 184, 26, 0.45)"
+  switch-unchecked-track-color: "rgba(255, 255, 255, 0.20)"
+  mdc-theme-primary: "#ffb81a"
+  paper-slider-active-color: "#ffb81a"
+
+  # --- card-mod: the actual backdrop blur on every card ----------------------
+  card-mod-theme: Majlis Glass
+  card-mod-card: |
+    ha-card {
+      backdrop-filter: blur(14px) saturate(150%);
+      -webkit-backdrop-filter: blur(14px) saturate(150%);
+    }

@@ -5,6 +5,8 @@ homeassistant/*
 !homeassistant/automations.yaml
 !homeassistant/scripts.yaml
 !homeassistant/scenes.yaml
+!homeassistant/themes/
+!homeassistant/dashboards/
 homeassistant/secrets.yaml
 homeassistant/.storage/
 homeassistant/.cloud/
@@ -46,11 +48,9 @@ caddy/config/
 .env.secrets
 *.token
 
-# Node
-node_modules/
-frontend/dist/
-frontend/.svelte-kit/
-
 # OS/editor
 .DS_Store
 *.swp
+
+# Owner's UI screenshots (feedback material) — never commit
+UI Photos(No Commit)/
