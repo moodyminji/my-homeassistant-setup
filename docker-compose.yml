@@ -47,3 +47,38 @@ services:
       - "8080:8080"
     environment:
       - TZ=${TZ}
+
+  asterisk:
+    container_name: asterisk
+    # Pinned: the project has had breaking releases (5.0, 5.1, 6.0). Bump deliberately.
+    image: ghcr.io/tech7fox/asterisk-hass-addon:6.2.0
+    restart: unless-stopped
+    # host networking: SIP 5060, AMI 5038 (localhost-only), WebSocket 8088 for the
+    # browsers (reached through caddy at /ws), and the RTP media range UDP 10000-20000.
+    # Publishing 10k UDP ports through Docker is slow and breaks ICE candidate addresses.
+    network_mode: host
+    # upstream's compose sets this; its s6 init expects a tty
+    tty: true
+    environment:
+      - TZ=${TZ}
+    volumes:
+      # config.json + custom/ overrides (see asterisk/generate-secrets.sh)
+      - ./asterisk/config:/config
+      - ./asterisk/media:/media
+
+  caddy:
+    container_name: caddy
+    build: ./caddy
+    restart: unless-stopped
+    # host networking: serves 443 to the tablets and reaches HA (itself on the host
+    # network, 127.0.0.1:8123) and Asterisk's ws port 8088 without extra plumbing.
+    network_mode: host
+    # DUCKDNS_TOKEN lives in .env.secrets (gitignored; copy .env.secrets.example)
+    env_file: .env.secrets
+    environment:
+      - SITE_HOST=${SITE_HOST}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # certs + ACME account: keep them, or reissuing trips Let's Encrypt rate limits
+      - ./caddy/data:/data
+      - ./caddy/config:/config

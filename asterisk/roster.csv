@@ -1,0 +1,7 @@
+# extension,display name,HA user id (blank = shared guest / backup user)
+# Wall tablets only: each tablet is logged into HA as its own user.
+# Regenerate secrets after editing: FORCE=1 ./asterisk/generate-secrets.sh
+201,tab1,f7d2f74a6e6c4e13b9c71e5b0277098b
+202,tab2,d9bfbdbea93a478eb3752dd9a6aebf21
+203,tab3,c523c2214e4940908939b6a35f88259a
+900,Guest,

@@ -91,6 +91,11 @@ device API is a design smell.
   most of it); cache last-known entity state so panels aren't blank on a blip.
 
 ## 7. Intercom — WebRTC (revised decision)
+> **UNDER REVISION (2026-09-19):** moving to **SIP via Asterisk**, with the client
+> (browser SIP Core vs a native SIP app on the tablets) chosen by the Phase 0 tests
+> in §12. The WebRTC/signaling plan below is superseded once that is settled; a
+> mic-over-HTTP test comes first because browsers only expose the microphone on
+> secure origins, which applies to *any* browser-based intercom, this plan included.
 - **Approach:** browser-native **WebRTC inside the PWA** for panel-to-panel
   voice/video and "page the whole house". Media flows peer-to-peer directly
   tablet-to-tablet on the LAN — lowest latency, no app to install, part of the
@@ -157,17 +162,75 @@ Design feel, in brief:
   (pill/among/stripe) as well as text; responsive down to phone width.
 
 ## 11. Current state
-- Host setup in progress (Debian + Docker install; runbook exists). First
-  milestone: HA container running and reachable at `http://majlis.local:8123`.
+- **HA is fully deployed across the house and working well** (as of 2026-09-19):
+  ~750 entities in 14 areas, and HA's own **TabletView** dashboards
+  (`dashboard-tabletview`, `tabletview-test`) already serve the tablets. All
+  devices are working. **The only piece left is the intercom.**
+- All 3 wall tablets are in hand (Fully Kiosk).
+- **Decided:** the UI is **HA dashboards** — the custom PWA (`frontend/`, on git
+  history up to `cada20d`) is to be retired, after Phase 0. Intercom scope is the
+  3 tablets only.
+- **Later, not now:** SIP calling **out** to external numbers over the ISP's
+  landline. Asterisk suits this (a PJSIP trunk), so choosing it now leaves the
+  door open. Open questions for then: does the ISP give SIP credentials, or is
+  the landline an analog port on its router (then an ATA/FXO gateway is needed)?
 
-## 12. Immediate next tasks (dev)
-1. Extend `docker-compose.yml`: add `mosquitto` (auth'd listener) + `zigbee2mqtt`
-   (dongle `by-id` passthrough, MQTT server config). Bring up, confirm Z2M UI.
-2. Scaffold `frontend/` (Vite + Svelte/React) as the OS shell — NavRail + page
-   router + theme first, then the Home page, then Rooms (see DESIGN.md §11–12).
-   Wire `home-assistant-js-websocket` with a long-lived token; render live.
-3. Build the `signaling` Node server + a minimal WebRTC call between two panels.
-4. Onboard the first room fully as the reference pattern for the rest.
+## 12. Immediate next tasks
+Plan agreed 2026-09-19 (the intercom is all that's left):
+- **Phase 0 — prove the call path on one tablet (no Docker):**
+  - 0a. Serve a plain-HTTP mic test page on the LAN; try it in Fully Kiosk, and
+    in Chrome with `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
+  - 0b. Native SIP app (Linphone) between two tablets: rings while Fully Kiosk is
+    in the foreground and with the screen off, two-way audio, still rings after
+    30+ min idle.
+- **Decided (owner): SIP Core + Asterisk**, in-dashboard calling. No HA add-ons
+  here (no Supervisor), so Asterisk is a compose container running the same image
+  as the add-on (`ghcr.io/tech7fox/asterisk-hass-addon`), and SIP Core comes via
+  HACS. **Proven 2026-09-19:** a real call (tablet 201 <-> PC 900) was answered
+  and bridged with two-way audio in **Chrome/Edge with the flag**
+  `unsafely-treat-insecure-origin-as-secure` on plain http (the entry must match the
+  HA page's exact origin incl. port). **The HA Companion app does NOT work over
+  plain http**: it rings, but Answer does nothing — the mic is blocked on an
+  insecure page, apps have no flag, and the app maintainers closed "mic over http"
+  (#3512, #4468) as not planned. A Chrome tab also can't go fullscreen.
+- **Decided (owner) 2026-09-19: real HTTPS certificate**, so every client (HA app,
+  Fully Kiosk, Chrome, phones) just works with no per-device setup. A free
+  DuckDNS name (`SITE_HOST` in `.env`) is pointed at the host's LAN IP; the
+  `caddy` container gets a Let's Encrypt cert via the DNS-01 challenge (token in
+  `.env.secrets`; only renewal needs internet) and serves `https://$SITE_HOST`,
+  proxying `/` to HA (`:8123`, which stays open on http for everything else) and
+  `/ws` to Asterisk (`:8088`). SIP Core's `custom_wss_url` becomes
+  `wss://$SITE_HOST/ws`. HA must trust Caddy as a reverse proxy, but **in HA
+  2026.9 the `http` settings are UI-managed** (Settings > System > Network) and
+  the YAML `http:` block is migrated once then IGNORED (a Repair says so) — so do
+  NOT put `http:` in `configuration.yaml`; enable the reverse-proxy option in the
+  UI and trust `127.0.0.1` and `::1`. Without it every proxied request gets a 400
+  ("not set-up for reverse proxies"). Tablets then use the **HA app** at
+  `https://$SITE_HOST`.
+  **PROVEN WORKING 2026-09-19** (owner: "works beautifully"): `minjihome.duckdns.org`
+  resolves to the LAN IP (router does not filter it), Caddy holds a valid Let's
+  Encrypt cert (first issued 2026-09-19, auto-renews; needs internet +
+  `DUCKDNS_TOKEN`), `/ws` reaches Asterisk, and calls were answered and bridged in
+  every combination: tab2 -> tab1 (202 -> 201), PC -> tab1, tab1 -> PC. SIP Core bug
+  #190 did NOT bite. The Chrome flag / Linphone fallbacks were not needed (if ever
+  needed: on https Chrome offers a real "Install app" = fullscreen PWA, no flag).
+  Remaining risk: #231 — a tablet whose page is backgrounded/asleep loses its SIP
+  registration, so it must stay awake on the dashboard to be reachable.
+- **Phase 1 — built and working:** pinned `asterisk` service in
+  `docker-compose.yml` (running), `asterisk/roster.csv` (201–203 tablets, 900
+  guest), `asterisk/generate-secrets.sh` (all secrets gitignored; WebSocket at
+  `wss://$SITE_HOST/ws` via Caddy), SIP Core installed via HACS with its options
+  pasted (Settings > Devices & services > SIP Core > Configure; an existing
+  install can change just `custom_wss_url` without rotating passwords).
+  Extensions: 201 tab1, 202 tab2, 203 tab3, 900 = any other HA user. A user must
+  be logged in (page open) to be reachable. **Still to do:** confirm tab3 (203),
+  test a tablet left idle 30+ min, keep screens on (#231), and keep `asterisk/`
+  hardening in mind (Asterisk's plain `:8088` ws and SIP `:5060` are open on the
+  LAN; only Caddy needs to reach 8088).
+- **Phase 2 — UI:** add an Intercom card to the existing TabletView dashboard,
+  then remove `frontend/`, move `DESIGN_1.md` + `majlis-os-reference.html` to
+  `design/`, and rewrite §1–2, §4–8, §10, §13 to match (HA dashboards + SIP).
+- **Phase 4 (later):** SIP trunk to the ISP landline for outbound calls.
 
 ## 13. Guardrails for Claude Code
 - Never commit secrets or tokens.

@@ -27,6 +27,21 @@ zigbee2mqtt/data/*
 !zigbee2mqtt/data/.gitkeep
 !zigbee2mqtt/data/configuration.yaml
 
+# Asterisk (SIP). Commit roster, generator and the static rtp.conf override;
+# everything the container or generator writes stays out (keys, AMI/SIP passwords).
+asterisk/config/*
+!asterisk/config/asterisk/
+asterisk/config/asterisk/*
+!asterisk/config/asterisk/custom/
+asterisk/config/asterisk/custom/*
+!asterisk/config/asterisk/custom/rtp.conf
+asterisk/sip-core-options.yaml
+asterisk/media/
+
+# Caddy runtime (issued certs, ACME account key)
+caddy/data/
+caddy/config/
+
 # Secrets / env
 .env.secrets
 *.token
