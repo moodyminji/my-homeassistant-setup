@@ -1,0 +1,638 @@
+<title>Majlis OS</title>
+<meta name="description" content="An OS-style, multi-page smart home interface mockup for wall tablets — home launcher, rooms, devices, apps and more.">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0a1211; --panel:#101d1c; --panel-2:#152625; --panel-3:#1c302e;
+  --ink:#eaf1ef; --ink-2:#c3d0cd; --muted:#8b9a97; --faint:#63726f;
+  --line:#22332f; --line-2:#2c403c;
+  --accent:#25c6bb; --accent-2:#39d9cd; --accent-ghost:#25c6bb1c;
+  --on:#3fd08a; --on-ghost:#3fd08a1c;
+  --heat:#f0a34b; --heat-ghost:#f0a34b22;
+  --cool:#4aa8f0; --cool-ghost:#4aa8f022;
+  --alert:#ef6b81; --alert-ghost:#ef6b8122;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --disp:"Archivo",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:18px; --r-sm:12px;
+  --sh:0 2px 4px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.28);
+}
+:root[data-theme="light"]{
+  --bg:#e7ecea; --panel:#ffffff; --panel-2:#f1f5f3; --panel-3:#e6ece9;
+  --ink:#122120; --ink-2:#384744; --muted:#5d6d6a; --faint:#8a9794;
+  --line:#dce3e0; --line-2:#cfd8d5;
+  --accent:#0d7c7e; --accent-2:#0a6567; --accent-ghost:#0d7c7e14;
+  --on:#20a065; --on-ghost:#20a06516;
+  --heat:#d4842a; --heat-ghost:#d4842a18;
+  --cool:#2f86d4; --cool-ghost:#2f86d418;
+  --alert:#c94a60; --alert-ghost:#c94a6018;
+  --sh:0 1px 2px rgba(18,33,32,.06),0 10px 26px rgba(18,33,32,.08);
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#e7ecea; --panel:#ffffff; --panel-2:#f1f5f3; --panel-3:#e6ece9;
+  --ink:#122120; --ink-2:#384744; --muted:#5d6d6a; --faint:#8a9794;
+  --line:#dce3e0; --line-2:#cfd8d5;
+  --accent:#0d7c7e; --accent-2:#0a6567; --accent-ghost:#0d7c7e14;
+  --on:#20a065; --on-ghost:#20a06516;
+  --heat:#d4842a; --heat-ghost:#d4842a18;
+  --cool:#2f86d4; --cool-ghost:#2f86d418;
+  --alert:#c94a60; --alert-ghost:#c94a6018;
+  --sh:0 1px 2px rgba(18,33,32,.06),0 10px 26px rgba(18,33,32,.08);
+}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+h1,h2,h3,h4{font-family:var(--disp);margin:0;letter-spacing:-.02em;line-height:1.12}
+button{font-family:inherit;cursor:pointer;color:inherit;border:none;background:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+.ribbon{padding:7px 20px;font-family:var(--mono);font-size:12px;color:var(--muted);
+  background:var(--panel);border-bottom:1px solid var(--line);text-align:center}
+.ribbon b{color:var(--accent)}
+
+.os{display:grid;grid-template-columns:96px 1fr;height:calc(100vh - 33px);min-height:560px}
+
+/* nav rail */
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;padding:16px 0;gap:4px;overflow-y:auto}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(140deg,var(--accent),var(--accent-2));
+  display:grid;place-items:center;margin-bottom:14px;flex:none;box-shadow:var(--sh)}
+.logo svg{width:26px;height:26px}
+.nav{display:flex;flex-direction:column;gap:3px;width:100%;align-items:center}
+.navbtn{width:72px;padding:9px 0 7px;border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  color:var(--faint);position:relative;transition:.14s}
+.navbtn svg{width:23px;height:23px}
+.navbtn span{font-size:10.5px;font-weight:600;letter-spacing:.01em}
+.navbtn:hover{color:var(--ink);background:var(--panel-2)}
+.navbtn.on{color:var(--accent);background:var(--accent-ghost)}
+.navbtn.on::before{content:"";position:absolute;left:-12px;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--accent)}
+.railspace{flex:1;min-height:8px}
+
+/* content viewport */
+.view{overflow-y:auto;padding:22px 26px 40px;position:relative}
+.page[hidden]{display:none!important}
+.page{animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.page{animation:none}}
+
+/* top bar */
+.bar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.bar .k{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.bar h1{font-size:clamp(24px,3.2vw,32px);font-weight:800;margin-top:3px}
+.bar .sub{color:var(--muted);font-size:14px;margin-top:3px}
+.baraside{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pill-stat{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+  border-radius:99px;padding:8px 14px;box-shadow:var(--sh);font-size:13px;font-weight:600}
+.pill-stat.ok{color:var(--on)} .pill-stat .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.wxcard{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:8px 13px;box-shadow:var(--sh)}
+.wxcard .big{font-family:var(--disp);font-weight:700;font-size:19px}
+.wxcard .lil{font-size:11.5px;color:var(--muted);line-height:1.25}
+
+/* section headers */
+.sec{display:flex;align-items:center;justify-content:space-between;margin:24px 0 12px}
+.sec:first-of-type{margin-top:0}
+.sec h2{font-size:16px;font-weight:700}
+.sec .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.sec .lnk{font-size:13px;color:var(--accent);font-weight:600}
+
+/* generic tiles */
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--sh);min-width:0}
+.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+
+/* toggle */
+.tog{width:46px;height:27px;border-radius:99px;background:var(--panel-3);position:relative;transition:.18s;flex:none;border:1px solid var(--line)}
+.tog::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--muted);transition:.18s}
+.on-el.active .tog,.tog.active{background:var(--on)}
+.on-el.active .tog::after,.tog.active::after{transform:translateX(19px);background:#fff}
+
+/* HOME: favorites quick controls */
+.grid-fav{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.qc{display:flex;flex-direction:column;gap:10px;min-height:118px;cursor:pointer}
+.qc .qtop{display:flex;justify-content:space-between;align-items:flex-start}
+.qc .ic{width:40px;height:40px;border-radius:11px;background:var(--panel-2);display:grid;place-items:center;color:var(--faint);transition:.2s}
+.qc .ic svg{width:21px;height:21px}
+.qc.active .ic{background:var(--heat-ghost);color:var(--heat);box-shadow:0 0 18px -6px var(--heat)}
+.qc.cool.active .ic{background:var(--cool-ghost);color:var(--cool);box-shadow:none}
+.qc.lock.active .ic{background:var(--on-ghost);color:var(--on);box-shadow:none}
+.qc .nm{font-family:var(--disp);font-weight:700;font-size:14.5px;margin-top:auto}
+.qc .st{font-size:12.5px;color:var(--muted)}
+
+/* suggested chips */
+.suggest{display:flex;gap:10px;flex-wrap:wrap}
+.sug{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:99px;
+  padding:9px 15px 9px 11px;box-shadow:var(--sh);cursor:pointer;transition:.14s}
+.sug:hover{border-color:var(--accent);color:var(--accent)}
+.sug .si{width:28px;height:28px;border-radius:8px;background:var(--accent-ghost);color:var(--accent);display:grid;place-items:center}
+.sug .si svg{width:16px;height:16px}
+.sug b{font-family:var(--disp);font-weight:600;font-size:13.5px}
+.sug small{color:var(--muted);font-size:12px;display:block;margin-top:-2px}
+
+/* power card */
+.power{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;align-items:center}
+.power .now{font-family:var(--disp);font-weight:800;font-size:40px;letter-spacing:-.02em;line-height:1}
+.power .now small{font-size:16px;color:var(--muted);font-weight:600}
+.power .meta{font-size:13px;color:var(--muted);margin-top:6px}
+.power .meta b{color:var(--on)}
+.spark{width:100%;height:74px;display:block}
+.pbreak{display:flex;flex-direction:column;gap:9px}
+.pbar{display:grid;grid-template-columns:88px 1fr auto;align-items:center;gap:10px;font-size:12.5px}
+.pbar .track{height:8px;border-radius:99px;background:var(--panel-3);overflow:hidden}
+.pbar .track i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.pbar .v{font-family:var(--mono);color:var(--muted)}
+
+/* scenes */
+.scenes{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.scene-b{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-align:left;
+  display:flex;flex-direction:column;gap:9px;transition:.14s}
+.scene-b:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.scene-b .si{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--panel-2);color:var(--accent)}
+.scene-b .si svg{width:19px;height:19px}
+.scene-b b{font-family:var(--disp);font-weight:700;font-size:13.5px}
+.scene-b span{font-size:12px;color:var(--muted);margin-top:-5px}
+.scene-b.on{background:var(--accent);border-color:var(--accent);color:#04211f}
+.scene-b.on .si{background:rgba(0,0,0,.14);color:#04211f}.scene-b.on span{color:rgba(4,33,31,.72)}
+
+/* app launcher */
+.apps{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.apps.mini{grid-template-columns:repeat(6,1fr)}
+.app{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;transition:.14s}
+.app:hover{transform:translateY(-3px)}
+.app .ai{width:100%;aspect-ratio:1;max-width:82px;border-radius:20px;display:grid;place-items:center;
+  box-shadow:var(--sh);border:1px solid var(--line)}
+.app .ai svg{width:34px;height:34px}
+.app b{font-size:12.5px;font-weight:600;text-align:center;color:var(--ink-2)}
+.app small{font-size:10.5px;color:var(--faint)}
+
+/* rooms: floor + room tabs */
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+.tab{flex:none;padding:8px 15px;border-radius:99px;background:var(--panel);border:1px solid var(--line);
+  color:var(--muted);font-size:13.5px;font-weight:600;white-space:nowrap;transition:.14s}
+.tab:hover{color:var(--ink)} .tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.floors .tab.on{background:var(--accent);border-color:var(--accent);color:#04211f}
+.room-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.climate{grid-column:span 2;grid-row:span 2;display:flex;flex-direction:column}
+.dial{margin:8px auto 4px;position:relative;width:190px;height:190px}
+.dial svg{transform:rotate(-90deg)}
+.dialtxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dialtxt .t{font-family:var(--disp);font-weight:800;font-size:44px;line-height:1}
+.dialtxt .t sup{font-size:19px;color:var(--muted);font-weight:600}
+.dialtxt .md{font-family:var(--mono);font-size:12px;color:var(--cool);letter-spacing:.1em;text-transform:uppercase;margin-top:6px;font-weight:600}
+.now{text-align:center;font-size:13px;color:var(--muted);margin-top:2px}
+.tempctl{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:12px}
+.tempctl button{width:46px;height:46px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);font-size:22px;display:grid;place-items:center;transition:.12s}
+.tempctl button:active{transform:scale(.94)}.tempctl button:hover{border-color:var(--accent);color:var(--accent)}
+.modes{display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.modes button{font-family:var(--mono);font-size:12px;padding:6px 12px;border-radius:99px;background:var(--panel-2);color:var(--muted);border:1px solid transparent}
+.modes button.on{background:var(--cool-ghost);color:var(--cool);border-color:var(--cool)}
+.light{display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:132px}
+.light .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.light .nm{font-family:var(--disp);font-weight:700;font-size:15px;margin-top:8px}
+.light .mt{font-size:12px;color:var(--muted)}
+.bulb{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--panel-2);color:var(--faint);transition:.2s}
+.bulb svg{width:20px;height:20px}
+.light.active .bulb{background:var(--heat-ghost);color:var(--heat);box-shadow:0 0 22px -6px var(--heat)}
+.slider{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:99px;background:var(--panel-3);outline:none;margin:0}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--accent);border:4px solid var(--panel);box-shadow:var(--sh);cursor:pointer}
+.slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--accent);border:4px solid var(--panel);cursor:pointer}
+.light.active .slider{background:linear-gradient(90deg,var(--heat) var(--p,60%),var(--panel-3) var(--p,60%))}
+.light.active .slider::-webkit-slider-thumb{background:var(--heat)}
+.dtile{display:flex;align-items:center;gap:12px;padding:14px 15px;cursor:pointer}
+.dtile .di{width:40px;height:40px;border-radius:11px;background:var(--panel-2);display:grid;place-items:center;color:var(--faint);transition:.2s}
+.dtile .di svg{width:20px;height:20px}.dtile.active .di{background:var(--on-ghost);color:var(--on)}
+.dtile .dn{flex:1;min-width:0}.dtile .dn b{font-family:var(--disp);font-weight:600;font-size:14px;display:block}
+.dtile .dn span{font-size:12px;color:var(--muted)}
+
+/* devices page */
+.search{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 15px;margin-bottom:8px;box-shadow:var(--sh)}
+.search svg{width:18px;height:18px;color:var(--faint)}
+.search input{border:none;background:none;outline:none;color:var(--ink);font-family:inherit;font-size:14.5px;width:100%}
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px}
+.dev-group{margin-bottom:18px}
+.dev-group h3{font-size:14px;font-family:var(--disp);color:var(--muted);margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.dev-group h3 .c{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.dev-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.dev-row{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 15px;box-shadow:var(--sh)}
+.dev-row .top{display:flex;align-items:center;gap:12px}
+.dev-row .di{width:38px;height:38px;border-radius:10px;background:var(--panel-2);display:grid;place-items:center;color:var(--faint);flex:none}
+.dev-row .di svg{width:19px;height:19px}
+.dev-row.active .di{background:var(--on-ghost);color:var(--on)}
+.dev-row .nm{flex:1;min-width:0}.dev-row .nm b{font-family:var(--disp);font-weight:600;font-size:14px;display:block}
+.dev-row .nm span{font-size:12px;color:var(--muted)}
+.dev-row .area{font-family:var(--mono);font-size:10.5px;color:var(--faint);background:var(--panel-3);padding:2px 7px;border-radius:99px}
+.multi{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.multi .fn{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+.multi .fn .fl{color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.chipset{display:flex;gap:6px}
+.chipset button{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:8px;background:var(--panel-2);color:var(--muted);border:1px solid transparent}
+.chipset button.on{background:var(--accent-ghost);color:var(--accent);border-color:var(--accent)}
+.tag-multi{font-family:var(--mono);font-size:10px;color:var(--accent);background:var(--accent-ghost);padding:2px 7px;border-radius:6px;margin-left:8px}
+
+/* automations */
+.auto-row{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px;box-shadow:var(--sh);margin-bottom:10px}
+.auto-row .ai{width:40px;height:40px;border-radius:11px;background:var(--accent-ghost);color:var(--accent);display:grid;place-items:center;flex:none}
+.auto-row .ai svg{width:20px;height:20px}
+.auto-row .info{flex:1;min-width:0}.auto-row .info b{font-family:var(--disp);font-weight:600;font-size:14.5px;display:block}
+.auto-row .info span{font-size:12.5px;color:var(--muted)}
+.auto-row .run{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.btn-run{font-size:12px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:99px;padding:6px 13px}
+.btn-run:hover{background:var(--accent-ghost)}
+
+/* energy */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:15px 17px;box-shadow:var(--sh)}
+.stat .v{font-family:var(--disp);font-weight:800;font-size:27px;margin-top:5px}
+.stat .v small{font-size:14px;color:var(--muted);font-weight:600}
+.stat .d{font-size:12px;color:var(--on);font-family:var(--mono);margin-top:3px}
+.bars{display:flex;align-items:flex-end;gap:10px;height:180px;padding:8px 4px 0}
+.bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+.bars .b i{width:100%;max-width:38px;background:linear-gradient(180deg,var(--accent),var(--accent-2));border-radius:7px 7px 0 0;transition:.3s}
+.bars .b.today i{background:linear-gradient(180deg,var(--heat),#f0b96b)}
+.bars .b span{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+/* security */
+.cams{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cam{border-radius:var(--r);overflow:hidden;position:relative;min-height:150px;border:1px solid var(--line);display:flex;align-items:flex-end;box-shadow:var(--sh)}
+.cam .feed{position:absolute;inset:0;background:radial-gradient(120% 90% at 70% 10%,#1b3a49,transparent 60%),linear-gradient(160deg,#0e2027,#152a24)}
+.cam .feed::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:100% 3px;opacity:.5}
+.cam .cb{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;background:rgba(0,0,0,.5);color:#fff;padding:3px 8px;border-radius:99px}
+.cam .cb .dot{width:7px;height:7px;border-radius:50%;background:var(--alert);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.cam .cf{position:relative;z-index:1;width:100%;padding:10px 12px;background:linear-gradient(0deg,rgba(0,0,0,.55),transparent);color:#fff;font-family:var(--disp);font-weight:600;font-size:13px}
+.arm{display:flex;gap:10px;margin-bottom:16px}
+.arm button{flex:1;padding:14px;border-radius:var(--r-sm);background:var(--panel);border:1px solid var(--line);font-family:var(--disp);font-weight:700;font-size:14px;color:var(--muted);box-shadow:var(--sh)}
+.arm button.on{background:var(--on-ghost);color:var(--on);border-color:var(--on)}
+.arm button.away.on{background:var(--alert-ghost);color:var(--alert);border-color:var(--alert)}
+
+/* intercom */
+.panel-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.pcall{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px;box-shadow:var(--sh)}
+.pcall .pi{width:44px;height:44px;border-radius:12px;background:var(--panel-2);display:grid;place-items:center;color:var(--accent);flex:none}
+.pcall .pi svg{width:22px;height:22px}
+.pcall .pn{flex:1}.pcall .pn b{font-family:var(--disp);font-weight:600;font-size:14.5px;display:block}
+.pcall .pn span{font-size:12px;color:var(--muted)}
+.callbtn{width:44px;height:44px;border-radius:50%;background:var(--accent);color:#04211f;display:grid;place-items:center}
+.callbtn svg{width:20px;height:20px}
+.page-all{width:100%;padding:16px;border-radius:var(--r);background:var(--accent);color:#04211f;font-family:var(--disp);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--sh)}
+
+/* settings */
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:15px 17px;box-shadow:var(--sh);margin-bottom:10px}
+.set-row .l b{font-family:var(--disp);font-weight:600;font-size:14.5px;display:block}
+.set-row .l span{font-size:12.5px;color:var(--muted)}
+.set-row .v{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.hp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+
+/* responsive */
+@media(max-width:1080px){
+  .grid-fav,.scenes,.room-grid,.scene-b{grid-template-columns:repeat(2,1fr)}
+  .room-grid{grid-template-columns:repeat(2,1fr)}.climate{grid-column:span 2}
+  .apps{grid-template-columns:repeat(4,1fr)}.dev-list{grid-template-columns:1fr}
+  .power{grid-template-columns:1fr}.cams{grid-template-columns:repeat(2,1fr)}
+  .stat-row{grid-template-columns:repeat(2,1fr)}.panel-list{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  .os{grid-template-columns:1fr}
+  .rail{position:fixed;bottom:0;left:0;right:0;flex-direction:row;height:auto;width:100%;
+    border-right:none;border-top:1px solid var(--line);padding:6px 8px;z-index:30;overflow-x:auto;gap:2px}
+  .logo,.railspace{display:none}
+  .navbtn{width:auto;min-width:60px;flex:1}
+  .view{height:calc(100vh - 33px);padding-bottom:80px}
+  .grid-fav,.scenes,.room-grid{grid-template-columns:1fr}.climate{grid-column:span 1}
+  .apps{grid-template-columns:repeat(3,1fr)}.cams{grid-template-columns:1fr}.stat-row{grid-template-columns:1fr}
+}
+</style>
+
+<div class="ribbon">Interactive OS mockup · <b>example data</b> — click the rail to switch pages. Home · Rooms · Devices · Apps · Automations · Energy · Security · Intercom · Settings.</div>
+
+<div class="os">
+  <!-- NAV RAIL -->
+  <nav class="rail" aria-label="Sections">
+    <div class="logo" title="Majlis"><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M8 19.5 17 11l9 8.5" fill="none" stroke="#04211f" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="22.5" r="2.4" fill="#04211f"/></svg></div>
+    <div class="nav" id="nav">
+      <button class="navbtn on" data-page="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Home</span></button>
+      <button class="navbtn" data-page="rooms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg><span>Rooms</span></button>
+      <button class="navbtn" data-page="devices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg><span>Devices</span></button>
+      <button class="navbtn" data-page="apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg><span>Apps</span></button>
+      <button class="navbtn" data-page="autos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg><span>Autos</span></button>
+      <button class="navbtn" data-page="energy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 4 14h7l-1 7 9-11h-7z"/></svg><span>Energy</span></button>
+      <button class="navbtn" data-page="security"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg><span>Security</span></button>
+      <button class="navbtn" data-page="intercom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/><path d="M9 10h.01M13 10h.01M17 10h.01"/></svg><span>Intercom</span></button>
+    </div>
+    <div class="railspace"></div>
+    <div class="nav">
+      <button class="navbtn" id="themebtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Theme</span></button>
+      <button class="navbtn" data-page="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 000-2l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1L14.9 3H9.1l-.4 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L2.6 11a7.6 7.6 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.4 2.5h5.8l.4-2.5a7 7 0 001.7-1l2.4 1 2-3.5z"/></svg><span>Settings</span></button>
+    </div>
+  </nav>
+
+  <!-- VIEW -->
+  <div class="view">
+
+    <!-- ===== HOME ===== -->
+    <section class="page" id="page-home">
+      <div class="bar">
+        <div><div class="k" id="greet">Good evening</div><h1>Majlis Home</h1><div class="sub">Everything's calm · <span id="clock" class="mono"></span></div></div>
+        <div class="baraside">
+          <div class="pill-stat ok"><span class="dot"></span>All secure</div>
+          <div class="wxcard"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--heat)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><div><div class="big">34°</div><div class="lil">Muscat · clear</div></div></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Favorites</h2><span class="lbl">pinned</span></div>
+      <div class="grid-fav">
+        <div class="tile qc active" data-fav><div class="qtop"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 00-4-10z"/></svg></div><div class="tog active"></div></div><div class="nm">Majlis Ceiling</div><div class="st">On · 72%</div></div>
+        <div class="tile qc cool active" data-fav><div class="qtop"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M4 12h16M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></div><div class="tog active"></div></div><div class="nm">Living AC</div><div class="st">Cooling · 22°C</div></div>
+        <div class="tile qc lock active" data-fav><div class="qtop"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div><div class="tog active"></div></div><div class="nm">Front Door</div><div class="st">Locked</div></div>
+        <div class="tile qc" data-fav><div class="qtop"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M16 3v4M6 7h12v4a6 6 0 01-12 0z"/><path d="M12 17v4"/></svg></div><div class="tog"></div></div><div class="nm">Coffee Plug</div><div class="st">Off</div></div>
+      </div>
+
+      <div class="sec"><h2>Suggested</h2><span class="lbl">for this time</span></div>
+      <div class="suggest">
+        <button class="sug"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span><span><b>Wind-down</b><small>Dim lights, cool bedrooms</small></span></button>
+        <button class="sug"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span><span><b>All lights off</b><small>3 still on downstairs</small></span></button>
+        <button class="sug"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span><span><b>Lock up</b><small>Garage door open 20 min</small></span></button>
+      </div>
+
+      <div class="sec"><h2>Power</h2><span class="lnk" data-goto="energy">Open Energy →</span></div>
+      <div class="tile power">
+        <div>
+          <div class="lbl">Drawing now</div>
+          <div class="now">1.9<small> kW</small></div>
+          <div class="meta">Today <b>14.8 kWh</b> · ▼ 12% vs yesterday</div>
+          <svg class="spark" viewBox="0 0 320 74" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs><path d="M0 58 L27 52 L54 55 L80 36 L107 42 L134 22 L160 30 L187 14 L214 27 L240 38 L267 22 L294 32 L320 16 L320 74 L0 74 Z" fill="url(#sg)"/><path d="M0 58 L27 52 L54 55 L80 36 L107 42 L134 22 L160 30 L187 14 L214 27 L240 38 L267 22 L294 32 L320 16" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="pbreak">
+          <div class="lbl" style="margin-bottom:4px">Top consumers now</div>
+          <div class="pbar"><span>AC units</span><div class="track"><i style="width:64%"></i></div><span class="v">1.2 kW</span></div>
+          <div class="pbar"><span>Water heater</span><div class="track"><i style="width:22%"></i></div><span class="v">420 W</span></div>
+          <div class="pbar"><span>Lighting</span><div class="track"><i style="width:11%"></i></div><span class="v">180 W</span></div>
+          <div class="pbar"><span>Other</span><div class="track"><i style="width:6%"></i></div><span class="v">110 W</span></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Scenes</h2><span class="lbl">one tap</span></div>
+      <div class="scenes">
+        <button class="scene-b"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div><b>Good Morning</b><span>40% · AC 23°</span></button>
+        <button class="scene-b on"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></div><b>Evening</b><span>Warm · sconces</span></button>
+        <button class="scene-b"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg></div><b>Movie</b><span>Dim · TV on</span></button>
+        <button class="scene-b"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div><b>Away</b><span>All off · armed</span></button>
+      </div>
+
+      <div class="sec"><h2>Apps</h2><span class="lnk" data-goto="apps">All apps →</span></div>
+      <div class="apps mini" id="home-apps"></div>
+    </section>
+
+    <!-- ===== ROOMS ===== -->
+    <section class="page" id="page-rooms" hidden>
+      <div class="bar"><div><div class="k">Rooms</div><h1 id="room-title">Majlis</h1><div class="sub">Ground floor · 6 devices · 25.4°C</div></div></div>
+      <div class="tabs floors"><button class="tab on">Ground</button><button class="tab">First</button><button class="tab">Second</button></div>
+      <div class="tabs" id="roomtabs">
+        <button class="tab on" data-room="Majlis">Majlis</button>
+        <button class="tab" data-room="Kitchen">Kitchen</button>
+        <button class="tab" data-room="Living Room">Living Room</button>
+        <button class="tab" data-room="Guest Majlis">Guest Majlis</button>
+      </div>
+      <div class="room-grid">
+        <div class="tile climate">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="lbl">Climate</div><h3 style="font-size:16px;margin-top:6px">Majlis AC</h3></div><div class="tog active" id="acTog"></div></div>
+          <div class="dial"><svg width="190" height="190" viewBox="0 0 190 190"><circle cx="95" cy="95" r="80" fill="none" stroke="var(--panel-3)" stroke-width="13"/><circle id="arc" cx="95" cy="95" r="80" fill="none" stroke="var(--cool)" stroke-width="13" stroke-linecap="round"/></svg><div class="dialtxt"><div class="t"><span id="setT">22</span><sup>°C</sup></div><div class="md">Cooling</div></div></div>
+          <div class="now">Now <b class="mono">25.4°C</b> · humidity 48%</div>
+          <div class="tempctl"><button id="tD" aria-label="Lower">−</button><div style="font-family:var(--mono);font-size:12px;color:var(--muted);width:64px;text-align:center">target</div><button id="tU" aria-label="Raise">+</button></div>
+          <div class="modes"><button class="on">Cool</button><button>Fan</button><button>Dry</button><button>Auto</button></div>
+        </div>
+        <div class="tile light active" data-light><div class="hd"><div><div class="lbl">Light</div><div class="nm">Ceiling</div><div class="mt"><span class="pct">72</span>% · warm</div></div><div class="bulb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 00-4-10z"/></svg></div></div><input class="slider" type="range" min="0" max="100" value="72" aria-label="Ceiling brightness"></div>
+        <div class="tile light" data-light><div class="hd"><div><div class="lbl">Light</div><div class="nm">Sconces</div><div class="mt"><span class="pct">0</span>% · off</div></div><div class="bulb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 00-4-10z"/></svg></div></div><input class="slider" type="range" min="0" max="100" value="0" aria-label="Sconces brightness"></div>
+        <button class="tile dtile active on-el" data-dev><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M16 3v4M6 7h12v4a6 6 0 01-12 0z"/><path d="M12 17v4"/></svg></div><div class="dn"><b>TV socket</b><span>On · 42 W</span></div><div class="tog active"></div></button>
+        <button class="tile dtile on-el" data-dev><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M9 4v6"/></svg></div><div class="dn"><b>Curtains</b><span>Closed</span></div><div class="tog"></div></button>
+      </div>
+    </section>
+
+    <!-- ===== DEVICES ===== -->
+    <section class="page" id="page-devices" hidden>
+      <div class="bar"><div><div class="k">Devices</div><h1>All Devices</h1><div class="sub">By device, not by room — multi-function devices keep their controls together</div></div></div>
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input placeholder="Search devices…" aria-label="Search devices"></div>
+      <div class="filters"><button class="tab on">All</button><button class="tab">Lights</button><button class="tab">Climate</button><button class="tab">Plugs</button><button class="tab">Sensors</button><button class="tab">Locks</button><button class="tab">Covers</button></div>
+
+      <div class="dev-group">
+        <h3>Climate & Fans <span class="c">3</span></h3>
+        <div class="dev-list">
+          <div class="dev-row active"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M4 12h16M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></div><div class="nm"><b>Living Ceiling Fan <span class="tag-multi">4 functions</span></b><span>On · medium · light on</span></div><span class="area">Living</span></div>
+            <div class="multi">
+              <div class="fn"><span class="fl">Power</span><div class="tog active"></div></div>
+              <div class="fn"><span class="fl">Speed</span><div class="chipset"><button>Low</button><button class="on">Med</button><button>High</button></div></div>
+              <div class="fn"><span class="fl">Light</span><div class="tog active"></div></div>
+              <div class="fn"><span class="fl">Oscillate</span><div class="tog"></div></div>
+            </div>
+          </div>
+          <div class="dev-row active"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v9"/><circle cx="12" cy="16.5" r="3.5"/><path d="M9 4h6"/></svg></div><div class="nm"><b>Master AC</b><span>Cooling · 20°C</span></div><span class="area">Master</span></div></div>
+        </div>
+      </div>
+
+      <div class="dev-group">
+        <h3>Lights <span class="c">2 of 14 shown</span></h3>
+        <div class="dev-list">
+          <div class="dev-row active"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 00-4-10z"/></svg></div><div class="nm"><b>Majlis Ceiling <span class="tag-multi">dim · color temp</span></b><span>On · 72% · warm white</span></div><span class="area">Majlis</span></div>
+            <div class="multi"><div class="fn"><span class="fl">Brightness</span><input class="slider" style="max-width:150px" type="range" min="0" max="100" value="72" aria-label="brightness"></div><div class="fn"><span class="fl">Warmth</span><div class="chipset"><button class="on">Warm</button><button>Neutral</button><button>Cool</button></div></div></div>
+          </div>
+          <div class="dev-row"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 00-4-10z"/></svg></div><div class="nm"><b>Kitchen Spots</b><span>Off</span></div><span class="area">Kitchen</span></div></div>
+        </div>
+      </div>
+
+      <div class="dev-group">
+        <h3>Plugs & Sensors <span class="c">2</span></h3>
+        <div class="dev-list">
+          <div class="dev-row active"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M16 3v4M6 7h12v4a6 6 0 01-12 0z"/><path d="M12 17v4"/></svg></div><div class="nm"><b>TV Socket</b><span>On · 42 W</span></div><span class="area">Majlis</span></div></div>
+          <div class="dev-row"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6M8 7a6 6 0 108 0"/></svg></div><div class="nm"><b>Majlis Temp/Humidity</b><span>25.4°C · 48% · battery 84%</span></div><span class="area">Majlis</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== APPS ===== -->
+    <section class="page" id="page-apps" hidden>
+      <div class="bar"><div><div class="k">Apps</div><h1>App Launcher</h1><div class="sub">Shortcuts to things Home Assistant doesn't control — open on the tablet or in a browser</div></div></div>
+      <div class="sec"><h2>Media</h2><span class="lbl">tap to launch</span></div>
+      <div class="apps" id="apps-media"></div>
+      <div class="sec"><h2>Comms & Home</h2><span class="lbl"></span></div>
+      <div class="apps" id="apps-utils"></div>
+    </section>
+
+    <!-- ===== AUTOMATIONS ===== -->
+    <section class="page" id="page-autos" hidden>
+      <div class="bar"><div><div class="k">Automations</div><h1>Automation Center</h1><div class="sub">Home Assistant runs these — this is where you watch and control them</div></div><div class="baraside"><button class="btn-run" style="border-color:var(--line)">+ New</button></div></div>
+      <div class="auto-row"><div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="info"><b>Sunset lights</b><span>When sun sets → Evening scene</span></div><span class="run">ran 6:31 PM</span><div class="tog active"></div></div>
+      <div class="auto-row"><div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="info"><b>Everyone away</b><span>No phones home → AC off, arm security</span></div><span class="run">ran 8:10 AM</span><div class="tog active"></div></div>
+      <div class="auto-row"><div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div><div class="info"><b>Motion hallway night</b><span>Motion 11pm–6am → hallway 15%</span></div><button class="btn-run">Run now</button><div class="tog active"></div></div>
+      <div class="auto-row"><div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M16 3v4M6 7h12v4a6 6 0 01-12 0z"/><path d="M12 17v4"/></svg></div><div class="info"><b>Tablet charge guard</b><span>Battery &gt;80% → plug off; &lt;40% → plug on</span></div><span class="run">idle</span><div class="tog active"></div></div>
+      <div class="auto-row" style="opacity:.6"><div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></div><div class="info"><b>Guest mode</b><span>Disabled</span></div><span class="run">off</span><div class="tog"></div></div>
+    </section>
+
+    <!-- ===== ENERGY ===== -->
+    <section class="page" id="page-energy" hidden>
+      <div class="bar"><div><div class="k">Energy</div><h1>Power Statistics</h1><div class="sub">Live draw, daily use and where it's going</div></div></div>
+      <div class="stat-row">
+        <div class="stat"><div class="lbl">Now</div><div class="v">1.9<small> kW</small></div><div class="d">normal</div></div>
+        <div class="stat"><div class="lbl">Today</div><div class="v">14.8<small> kWh</small></div><div class="d">▼ 12%</div></div>
+        <div class="stat"><div class="lbl">This month</div><div class="v">312<small> kWh</small></div><div class="d" style="color:var(--muted)">on track</div></div>
+        <div class="stat"><div class="lbl">Est. cost</div><div class="v">7.5<small> OMR</small></div><div class="d" style="color:var(--muted)">month to date</div></div>
+      </div>
+      <div class="tile">
+        <div class="sec" style="margin-top:0"><h2>Last 7 days</h2><span class="lbl">kWh / day</span></div>
+        <div class="bars">
+          <div class="b"><i style="height:60%"></i><span>Sun</span></div><div class="b"><i style="height:72%"></i><span>Mon</span></div>
+          <div class="b"><i style="height:55%"></i><span>Tue</span></div><div class="b"><i style="height:80%"></i><span>Wed</span></div>
+          <div class="b"><i style="height:68%"></i><span>Thu</span></div><div class="b"><i style="height:90%"></i><span>Fri</span></div>
+          <div class="b today"><i style="height:74%"></i><span>Sat</span></div>
+        </div>
+      </div>
+      <div class="sec"><h2>By area</h2><span class="lbl">today</span></div>
+      <div class="tile"><div class="pbreak">
+        <div class="pbar"><span>Bedrooms</span><div class="track"><i style="width:70%"></i></div><span class="v">5.2 kWh</span></div>
+        <div class="pbar"><span>Living</span><div class="track"><i style="width:52%"></i></div><span class="v">3.8 kWh</span></div>
+        <div class="pbar"><span>Kitchen</span><div class="track"><i style="width:40%"></i></div><span class="v">2.9 kWh</span></div>
+        <div class="pbar"><span>Water heater</span><div class="track"><i style="width:30%"></i></div><span class="v">2.1 kWh</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===== SECURITY ===== -->
+    <section class="page" id="page-security" hidden>
+      <div class="bar"><div><div class="k">Security</div><h1>Cameras & Locks</h1><div class="sub">Frigate feeds, doors and sensors</div></div></div>
+      <div class="arm"><button class="on">Home</button><button>Night</button><button class="away">Away</button></div>
+      <div class="cams">
+        <div class="cam"><div class="feed"></div><div class="cb"><span class="dot"></span>LIVE</div><div class="cf">Front Entrance</div></div>
+        <div class="cam"><div class="feed"></div><div class="cb"><span class="dot"></span>LIVE</div><div class="cf">Driveway</div></div>
+        <div class="cam"><div class="feed"></div><div class="cb"><span class="dot"></span>LIVE</div><div class="cf">Backyard</div></div>
+      </div>
+      <div class="sec"><h2>Doors & sensors</h2><span class="lbl">now</span></div>
+      <div class="dev-list">
+        <div class="dev-row active"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div><div class="nm"><b>Front Door</b><span>Locked · closed</span></div><span class="area">Entry</span></div></div>
+        <div class="dev-row"><div class="top"><div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6"/></svg></div><div class="nm"><b>Garage Door</b><span style="color:var(--heat)">Open · 20 min</span></div><span class="area">Garage</span></div></div>
+      </div>
+    </section>
+
+    <!-- ===== INTERCOM ===== -->
+    <section class="page" id="page-intercom" hidden>
+      <div class="bar"><div><div class="k">Intercom</div><h1>House Intercom</h1><div class="sub">Call a panel, or page every floor at once · WebRTC, on your network</div></div></div>
+      <button class="page-all"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 0118 0M6.5 12.5a5 5 0 0111 0"/><circle cx="12" cy="18" r="2"/></svg>Page the whole house</button>
+      <div class="sec"><h2>Panels</h2><span class="lbl">tap to call</span></div>
+      <div class="panel-list">
+        <div class="pcall"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M10 18h4"/></svg></div><div class="pn"><b>Ground · Majlis</b><span>Idle</span></div><button class="callbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a12 12 0 006 6l2-3 5 2v4a2 2 0 01-2 2A17 17 0 013 6a2 2 0 012-2z"/></svg></button></div>
+        <div class="pcall"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M10 18h4"/></svg></div><div class="pn"><b>First · Landing</b><span>Idle</span></div><button class="callbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a12 12 0 006 6l2-3 5 2v4a2 2 0 01-2 2A17 17 0 013 6a2 2 0 012-2z"/></svg></button></div>
+        <div class="pcall"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M10 18h4"/></svg></div><div class="pn"><b>Second · Kids</b><span>Idle</span></div><button class="callbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a12 12 0 006 6l2-3 5 2v4a2 2 0 01-2 2A17 17 0 013 6a2 2 0 012-2z"/></svg></button></div>
+        <div class="pcall"><div class="pi" style="color:var(--heat)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V8l8-4 8 4v12"/><circle cx="12" cy="11" r="2"/></svg></div><div class="pn"><b>Front Door Station</b><span>Ring → all panels</span></div><button class="callbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></button></div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section class="page" id="page-settings" hidden>
+      <div class="bar"><div><div class="k">Settings</div><h1>System</h1><div class="sub">This panel & the Majlis host</div></div></div>
+      <div class="sec" style="margin-top:0"><h2>Host health</h2><span class="lbl">majlis.local</span></div>
+      <div class="hp">
+        <div class="stat"><div class="lbl">CPU</div><div class="v">18<small>%</small></div><div class="d" style="color:var(--muted)">i3 · cool</div></div>
+        <div class="stat"><div class="lbl">Memory</div><div class="v">3.9<small>/6 GB</small></div><div class="d" style="color:var(--muted)">HA + Z2M + UI</div></div>
+        <div class="stat"><div class="lbl">Uptime</div><div class="v">6<small>d</small></div><div class="d" style="color:var(--on)">healthy</div></div>
+      </div>
+      <div class="sec"><h2>Panel</h2><span class="lbl">this tablet</span></div>
+      <div class="set-row"><div class="l"><b>Theme</b><span>Dark / light / follow system</span></div><button class="btn-run" id="themebtn2">Toggle</button></div>
+      <div class="set-row"><div class="l"><b>Assigned floor</b><span>Which floor this panel controls by default</span></div><span class="v">Ground</span></div>
+      <div class="set-row"><div class="l"><b>Screen dim</b><span>After 2 min idle → 15%</span></div><div class="tog active"></div></div>
+      <div class="set-row"><div class="l"><b>Kiosk lock</b><span>Stay in the app; hide system UI</span></div><div class="tog active"></div></div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  function toggleTheme(){var c=root.getAttribute('data-theme');var d=c?c==='dark':!(window.matchMedia&&window.matchMedia('(prefers-color-scheme:light)').matches);root.setAttribute('data-theme',d?'light':'dark');}
+  document.getElementById('themebtn').addEventListener('click',toggleTheme);
+  var t2=document.getElementById('themebtn2'); if(t2)t2.addEventListener('click',toggleTheme);
+
+  // clock + greeting
+  function tick(){var d=new Date(),h=d.getHours();document.getElementById('greet').textContent=h<5?'Late night':h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night';document.getElementById('clock').textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
+  tick();setInterval(tick,10000);
+
+  // page nav
+  var pages=[].slice.call(document.querySelectorAll('.page'));
+  var navs=[].slice.call(document.querySelectorAll('.navbtn[data-page]'));
+  function go(id){
+    pages.forEach(function(p){p.hidden = p.id!=='page-'+id;});
+    navs.forEach(function(n){n.classList.toggle('on',n.dataset.page===id);});
+    var v=document.querySelector('.view'); if(v)v.scrollTop=0;
+  }
+  navs.forEach(function(n){n.addEventListener('click',function(){go(n.dataset.page);});});
+  document.querySelectorAll('[data-goto]').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',function(){go(el.dataset.goto);});});
+
+  // app launcher data
+  var apps=[
+    {n:'Spotify',s:'music',c:'#1DB954',d:'M12 2a10 10 0 100 20 10 10 0 000-20z',dark:1,path:'M7 14c3-1 6-1 9 1M7 11c4-1 8-1 11 1M7 8c5-1 9 0 12 2'},
+  ];
+  function appTile(name,color,glyph){
+    var el=document.createElement('button');el.className='app';
+    el.innerHTML='<div class="ai" style="background:'+color+'22;color:'+color+'">'+glyph+'</div><b>'+name+'</b>';
+    el.addEventListener('click',function(){el.style.transform='scale(.94)';setTimeout(function(){el.style.transform='';},140);});
+    return el;
+  }
+  var G={
+    play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    music:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M9 18V6l12-2v12"/></svg>',
+    tv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg>',
+    cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="M17 10l4-2v8l-4-2"/></svg>',
+    chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11 7l-5 1 1-4A8 8 0 1121 12z"/></svg>',
+    router:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 17h.01M12 6a6 6 0 016 6M12 9a3 3 0 013 3"/></svg>',
+    weather:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 15a4 4 0 000-8 6 6 0 00-11 2 4 4 0 00-1 6z"/></svg>',
+    music2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+    book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/></svg>',
+    calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>'
+  };
+  var media=[['Spotify','#1DB954',G.music],['YouTube','#FF0000',G.play],['Netflix','#E50914',G.tv],['Plex','#E5A00D',G.music2],['Radio','#25c6bb',G.weather],['Books','#7a5cc0',G.book]];
+  var utils=[['CCTV App','#4aa8f0',G.cam],['WhatsApp','#25D366',G.chat],['Router','#8b9a97',G.router],['Weather','#f0a34b',G.weather],['Calendar','#ef6b81',G.calendar],['Browser','#25c6bb',G.play]];
+  function fill(id,list){var box=document.getElementById(id);if(!box)return;list.forEach(function(a){box.appendChild(appTile(a[0],a[1],a[2]));});}
+  fill('apps-media',media);fill('apps-utils',utils);
+  fill('home-apps',media.slice(0,3).concat(utils.slice(0,3)));
+
+  // favorites toggles
+  document.querySelectorAll('[data-fav]').forEach(function(t){
+    t.addEventListener('click',function(e){
+      if(e.target.closest('.tog')||true){var on=t.classList.toggle('active');t.querySelector('.tog').classList.toggle('active',on);
+        var st=t.querySelector('.st');var nm=t.querySelector('.nm').textContent;
+        if(/Door/.test(nm))st.textContent=on?'Locked':'Unlocked';else if(/AC/.test(nm))st.textContent=on?'Cooling · 22°C':'Off';
+        else if(/Ceiling/.test(nm))st.textContent=on?'On · 72%':'Off';else st.textContent=on?'On':'Off';}
+    });
+  });
+
+  // scenes
+  document.querySelectorAll('.scene-b').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.scene-b').forEach(function(x){x.classList.remove('on');});b.classList.add('on');});});
+
+  // rooms: climate dial
+  var set=22,MIN=16,MAX=30,arc=document.getElementById('arc');
+  if(arc){var circ=2*Math.PI*80;function draw(){document.getElementById('setT').textContent=set;var frac=(set-MIN)/(MAX-MIN);var vis=circ*0.75;arc.setAttribute('stroke-dasharray',vis+' '+circ);arc.setAttribute('stroke-dashoffset',vis*(1-frac));}draw();
+    document.getElementById('tU').onclick=function(){if(set<MAX){set++;draw();}};document.getElementById('tD').onclick=function(){if(set>MIN){set--;draw();}};
+    document.getElementById('acTog').addEventListener('click',function(){this.classList.toggle('active');});
+    document.querySelectorAll('#page-rooms .modes button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#page-rooms .modes button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');};});
+  }
+  // lights
+  document.querySelectorAll('.light').forEach(function(t){var s=t.querySelector('.slider'),pct=t.querySelector('.pct'),mt=t.querySelector('.mt');
+    function paint(){var v=+s.value;t.style.setProperty('--p',v+'%');if(pct)pct.textContent=v;if(v>0){t.classList.add('active');if(mt)mt.innerHTML='<span class="pct">'+v+'</span>% · warm';}else{t.classList.remove('active');if(mt)mt.innerHTML='<span class="pct">0</span>% · off';}}
+    s.addEventListener('input',paint);paint();
+    var bulb=t.querySelector('.bulb');if(bulb)bulb.addEventListener('click',function(){if(+s.value>0){s.dataset.last=s.value;s.value=0;}else{s.value=s.dataset.last||60;}s.dispatchEvent(new Event('input'));});
+  });
+  // generic dtile / dev-row / toggles / chipsets
+  document.querySelectorAll('.dtile,.dev-row').forEach(function(d){d.addEventListener('click',function(e){if(e.target.closest('.slider')||e.target.closest('.chipset')||e.target.closest('.multi'))return;d.classList.toggle('active');var tg=d.querySelector('.tog');if(tg)tg.classList.toggle('active',d.classList.contains('active'));});});
+  document.querySelectorAll('.multi .tog, .auto-row .tog, .set-row .tog').forEach(function(tg){tg.addEventListener('click',function(e){e.stopPropagation();tg.classList.toggle('active');});});
+  document.querySelectorAll('.chipset').forEach(function(cs){cs.querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();cs.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');});});});
+  // room tabs
+  var roomData={'Majlis':'Ground floor · 6 devices · 25.4°C','Kitchen':'Ground floor · 4 devices · 26.1°C','Living Room':'Ground floor · 5 devices · 24.8°C','Guest Majlis':'Ground floor · 4 devices · 25.0°C'};
+  document.querySelectorAll('#roomtabs .tab').forEach(function(tb){tb.addEventListener('click',function(){document.querySelectorAll('#roomtabs .tab').forEach(function(x){x.classList.remove('on');});tb.classList.add('on');document.getElementById('room-title').textContent=tb.dataset.room;document.querySelector('#page-rooms .sub').textContent=roomData[tb.dataset.room]||'';});});
+  document.querySelectorAll('.floors .tab').forEach(function(tb){tb.addEventListener('click',function(){document.querySelectorAll('.floors .tab').forEach(function(x){x.classList.remove('on');});tb.classList.add('on');});});
+  // arm
+  document.querySelectorAll('.arm button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.arm button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');});});
+  // filters/generic tabs (visual)
+  document.querySelectorAll('.filters .tab').forEach(function(tb){tb.addEventListener('click',function(){tb.parentNode.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});tb.classList.add('on');});});
+})();
+</script>

@@ -45,7 +45,9 @@ type=aor
 max_contacts=6
 remove_existing=yes
 remove_unavailable=yes
-qualify_frequency=0
+; Ping each tablet over its WebSocket every 30 s: keeps the socket from idling out and lets
+; Asterisk notice a dead one (else a call "rings" a tablet that never hears it).
+qualify_frequency=30
 
 [sipjs-phone-endpoint](!)
 type=endpoint
