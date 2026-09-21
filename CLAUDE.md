@@ -104,6 +104,12 @@ Asterisk directly.
   generated dashboard, `WALLPANEL_IDLE_S` = 120 s (the old TabletView used 10 s and WallPanel's
   default *internet* photo source, picsum.photos). Now: no photos, a clock + weather only, fully
   local; it returns to `/tablet-glass/home` on wake.
+  **WallPanel vs the intercom (confirmed 2026-09-21):** the screensaver (z-index 1000) sits above SIP
+  Core's popup and swallows the waking tap plus all clicks for 1 s, so a call to an idle tablet rang
+  but Answer/Decline did nothing until a reload. Fix: `dashboards/majlis-call-wake.js` (loaded via
+  `frontend: extra_module_url`, copied to root-owned `www/` with `sudo install`) sends WallPanel a
+  centre-screen `mousemove` on SIP Core's `sipcore-call-started`, and every 30 s until
+  `sipcore-call-ended`. Don't use (0,0): WallPanel reads it as a touch zone and ignores it.
 - **Tablet layout (v2, redesigned 2026-09-20 after the owner's feedback "foundation is
   great but not friendly/pretty"):** every page is a header (greeting | glass tab pill
   Home / Intercom / Rooms | "This tablet: <room>" from the HA user tab1-3) over
@@ -242,10 +248,9 @@ Design feel, in brief:
   the committed compose is HEAD plus the `asterisk`/`caddy` services.
 
 ## 12. Next tasks
-0. **Tablet dashboard v3 (Graphite + fuller weather + WallPanel; owner has seen v2, not v3):** TEST: while
-   the WallPanel screensaver is showing, call that tablet — confirm the SIP incoming-call popup is
-   visible above it (if not, lower WallPanel's `z_index` or disable the screensaver). Also set the HA
-   app to keep the screen on. Original v1 notes:  restart HA once
+0. **Tablet dashboard v3 (Graphite + fuller weather + WallPanel; owner has seen v2, not v3):** VERIFY the
+   call-wake shim (§6): call an idle tablet with the screensaver showing; Answer/Decline must work
+   first tap. Also set the HA app to keep the screen on. Original v1 notes:  restart HA once
    (registers `/tablet-glass`, the `input_text` helper and the theme), open
    `https://$SITE_HOST/tablet-glass/home`, set Profile → Theme → "Majlis Glass" on
    each tablet, then iterate the look with the owner (blur strength, sizes, column
