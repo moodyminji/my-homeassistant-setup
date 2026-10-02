@@ -60,6 +60,7 @@ Asterisk directly.
     config/asterisk/custom/rtp.conf   # the only tracked file under config/
   caddy/                    # HTTPS front door: Dockerfile + Caddyfile (certs gitignored)
   design/                   # design language: DESIGN.md + majlis-os-reference.html
+  docs/PROJECT-JOURNEY.md   # chronological walkthrough for the owner: what was done and why
   systemd/majlis-compose.service
 ```
 
