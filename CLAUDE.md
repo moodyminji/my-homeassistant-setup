@@ -252,11 +252,29 @@ Design feel, in brief:
 - **The old PWA is removed** (this change); design refs are in `design/`.
 - Not yet verified: tab3 (203), and a tablet left idle 30+ minutes (bug #231).
 - **Zigbee is up (2026-10-02):** Z2M runs on the ZBDongle-P and HA's MQTT integration
-  is connected. Two HOBEIAN ZG-807Z USB repeaters are paired as routers ("1st Floor
-  Repeater", "Mohammeds Floor Repeater", LQI 189 / 174); no end devices yet. Pair new
-  devices near the dongle or a repeater, then move them. A stray **snap** Mosquitto
-  on the host was holding `127.0.0.1:1883` and was removed. Coordinator firmware is
-  the factory 20210708 build (old; reflash is optional and easiest before pairing).
+  is connected. The server room is **under the staircase on the ground floor** and the
+  house is concrete throughout: Zigbee does not cross a floor slab, only the stair
+  opening. Working layout = a chain up the stairwell: dongle → repeater on the ground
+  floor ~10 m away facing the stairs (still named "1st Floor Repeater", LQI ~115) →
+  repeater on the first floor (temporarily named "Xst Floor Repeater", reaches the
+  dongle only via the first one) ; "Family Room Controller" (ZG-IR01 battery IR
+  remote) also routes via the stairs repeater. Both repeaters are HOBEIAN ZG-807Z.
+  **The rename is half done:** stairs one → e.g. "Ground Floor Stairs Repeater", then
+  "Xst…" → "1st Floor Repeater" (in that order, with the HA entity-ID option ticked).
+  The top floor ("Mohammed's floor") has no coverage yet. Plan: one more USB repeater
+  at the top-floor stair opening (+ a spare, USB extension cables), Zigbee 3.0 plugs
+  as routers inside each floor, install from the dongle outward; fallback is a network
+  coordinator (SLZB-06) on a middle floor or one per floor. Pair devices near the
+  dongle or a router, then move them. A stray **snap** Mosquitto on the host was
+  holding `127.0.0.1:1883` and was removed.
+- **Zigbee lessons (2026-10-02):** judge a device by "Last seen" moving and
+  Availability staying Online past the 10-min check; the **Interview button reports
+  success for an already-paired device even when it never answers**. Unplugging the
+  dongle stops Z2M and Docker does not restart it (`sudo docker start zigbee2mqtt`).
+  Coordinator firmware was flashed 20210708 → **20250321** with `cc2538-bsl`
+  (`--bootloader-sonoff-usb`) run in a throwaway `python:3-slim` container; Z2M
+  restored the network from `coordinator_backup.json` and all devices stayed paired.
+  `advanced.transmit_power: 20` is set.
 - The working tree still holds the owner's uncommitted CasaOS rewrite of
   `docker-compose.yml` (absolute paths, `TZ: Etc/UTC`), deliberately NOT committed;
   the committed compose is HEAD plus the `asterisk`/`caddy` services.

@@ -10,6 +10,7 @@ serial:
 advanced:
   log_level: info
   last_seen: ISO_8601
+  transmit_power: 20
   channel: 20
   network_key: '!secret.yaml network_key'
   pan_id: 45315
@@ -33,4 +34,6 @@ devices:
   '0xa4c13899c48217e6':
     friendly_name: 1st Floor Repeater
   '0xa4c1389e264f103f':
-    friendly_name: Mohammeds Floor Repeater
+    friendly_name: Xst Floor Repeater
+  '0xa4c138ccf9eacc41':
+    friendly_name: Family Room Controller

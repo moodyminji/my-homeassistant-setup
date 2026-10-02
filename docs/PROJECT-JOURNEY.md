@@ -46,7 +46,7 @@ dashboard.
 | 19–20 Sep | Tablet dashboard and "Majlis Glass" theme, three design rounds |
 | 20 Sep | Fix: Asterisk pings each tablet every 30 s |
 | 21–22 Sep | Fix: screensaver was blocking the Answer button |
-| 2 Oct | Zigbee brought up: dongle, two repeaters, Home Assistant connected |
+| 2 Oct | Zigbee brought up: dongle, two repeaters, first device; range problem solved with a chain up the stairwell; dongle firmware updated |
 
 ---
 
@@ -289,7 +289,7 @@ root: `sudo install -m 644 homeassistant/dashboards/majlis-call-wake.js homeassi
 
 ---
 
-## Chapter 8 — Zigbee (2 Oct, commit `ba8e956`)
+## Chapter 8 — Zigbee (2 Oct, first commit `ba8e956`)
 
 **Why Zigbee:** it is a low-power radio network for sensors, switches and plugs that
 works with no cloud and no Wi-Fi. Devices relay for each other, forming a *mesh*.
@@ -300,7 +300,10 @@ works with no cloud and no Wi-Fi. Devices relay for each other, forming a *mesh*
   It sits on a USB extension cable, away from the laptop, because USB 3 ports and the
   laptop itself create interference on the same 2.4 GHz band.
 - **Two HOBEIAN ZG-807Z USB repeaters** — *routers*. They do nothing except pass
-  signal along, one for each floor the server is not on.
+  signal along. The first plan was one for each floor the server is not on; that
+  did not work (see "The range problem" below).
+- **One HOBEIAN ZG-IR01** — a battery-powered infrared remote with a humidity
+  sensor, named "Family Room Controller". The first real device on the network.
 
 **How a Zigbee message reaches a dashboard**
 
@@ -344,17 +347,111 @@ announces each device to Home Assistant over MQTT, so devices appear there on th
    of every Zigbee device is switched off by default. In Zigbee2MQTT's list, the
    "Last seen" and "Availability" columns showed "Disabled" because those two
    features are off by default. Both are now switched on in the config.
+6. **Unplugging the dongle stops Zigbee2MQTT, and it stays stopped.** Docker does not
+   restart it, because the device is missing at that moment. After moving the dongle
+   to another port: `sudo docker start zigbee2mqtt`. Stop it first next time.
 
-**Result:** both repeaters joined as routers with link quality (LQI) of 189 and 174
-out of 255. Above about 50 is comfortable.
+### The range problem (the afternoon of 2 Oct)
+
+Both repeaters paired next to the dongle with a signal of 189 and 174 out of 255,
+then went silent as soon as they were moved one and two floors up. It took several
+hours to pin down, partly because of readings that looked fine and were not.
+
+**The house is the cause.** The server room is under the staircase on the ground
+floor, and the house is concrete throughout. A Zigbee signal does not get through a
+concrete floor slab in any useful strength. It does travel through the opening where
+the stairs pass through each floor.
+
+**What works:** a chain up the stairwell, each repeater within reach of the next.
+
+```
+dongle (server room, under the stairs)
+   │  signal ~115 both ways
+repeater on the ground floor, about 10 m away, facing the stairs
+   │  signal ~45–97
+repeater on the first floor
+   │
+(nothing yet on the top floor)
+```
+
+The first-floor repeater cannot hear the dongle at all (signal 0) and does not need
+to; its messages hop through the one by the stairs. The Family Room Controller made
+the same switch by itself, going from a signal of 1–5 straight to the dongle to 91
+through the stairs repeater. That is the mesh doing its job.
+
+**Checks that can be trusted, and ones that cannot**
+
+- **Trust "Last seen"** jumping to the current time, and **"Availability"** staying
+  Online through the check that runs about every 10 minutes.
+- **Trust the Map tab** when it shows a link in both directions. A scan that says a
+  repeater "failed" means that repeater did not answer.
+- **Do not trust the Interview button** on a device that is already paired. It
+  reports "successful" after a 10-second timeout from what Zigbee2MQTT remembers,
+  even when the device never answers.
+- **Do not trust a signal number recorded at pairing.** The 189 and 174 were measured
+  next to the dongle and stayed on screen long after the repeaters had moved.
+
+**What was tried that was not the cause**
+
+- Raising the dongle's transmit power to its maximum (`transmit_power: 20`). It is
+  still set; it did not fix the upstairs links.
+- Moving the dongle to another USB port.
+- Updating the dongle's firmware (below). Worth doing, but not the fix.
+
+### Firmware update
+
+The dongle shipped with firmware from July 2021. It was updated to the March 2025
+release (`20250321`) from the Koenkk/Z-Stack-firmware project.
+
+How it was done:
+
+1. Stop Zigbee2MQTT (`sudo docker stop zigbee2mqtt`).
+2. Run the `cc2538-bsl` flashing tool inside a throwaway `python:3-slim` container,
+   with the dongle passed in and the option `--bootloader-sonoff-usb`, which puts
+   this dongle into flashing mode without opening its case. The tool erases, writes
+   and verifies.
+3. Start Zigbee2MQTT. It saw the wiped dongle and restored the network from
+   `coordinator_backup.json`. All three devices stayed paired.
+
+One snag: the tool would not install from a zip download until it was given a version
+number through the `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CC2538_BSL` setting.
+
+The firmware file and the pre-update backups are in `~/zigbee-fw/` on the server.
+
+### State at the end of the day
+
+| Device | Where | State |
+|---|---|---|
+| "1st Floor Repeater" | Ground floor, facing the stairs | Online, signal ~115 |
+| "Xst Floor Repeater" | First floor | Online through the stairs repeater |
+| "Family Room Controller" | Family room | Online through the stairs repeater |
+
+The two repeater names no longer match where they are. The rename was started and
+left half done: the one by the stairs should become something like "Ground Floor
+Stairs Repeater", and "Xst Floor Repeater" should then become "1st Floor Repeater".
+Rename in that order, because two devices cannot share a name, and tick the option
+that updates the Home Assistant entity ID.
+
+**Plan for the rest of the house**
+
+- **One more USB repeater** at the stair opening on the top floor, plus a spare, and
+  USB extension cables so each repeater can sit where the signal is good.
+- **Zigbee smart plugs** (Zigbee 3.0, UK-type pins, listed as supported by
+  Zigbee2MQTT) inside each floor. They relay like a repeater and are also useful.
+  Wall switches relay only if they have a neutral wire.
+- **Install from the dongle outward.** Battery devices go in last.
+- **Put the chain on sockets nobody switches off.** Everything upstairs depends on
+  the repeaters below it.
+- **Fallback:** a network coordinator (for example an SLZB-06) that sits on a middle
+  floor and connects by Ethernet or Wi-Fi, or one coordinator per floor.
 
 **Things worth knowing**
 
 - **Channel 20** was chosen because it sits between Wi-Fi channels 6 and 11. The
   server has no Wi-Fi card, so it could not check which channel your router uses.
-  Changing the Zigbee channel is easy now and can mean re-pairing devices later.
-- **The dongle runs its factory firmware from July 2021.** It works. Newer firmware
-  is steadier on big networks, and updating is simplest before many devices are paired.
+  Changing the Zigbee channel can mean re-pairing devices.
+- **The battery IR remote sleeps.** Commands sent to it fail unless it is awake;
+  press a button on it, then send the command straight away.
 - **The pairing page** is `http://192.168.100.49:8080`. It has no login, which is
   acceptable only because it is reachable from the LAN alone.
 - **Mains-powered Zigbee devices also act as repeaters.** Battery devices do not.
@@ -387,8 +484,9 @@ connection directly, and whether intercom calls work from outside.
 - Home Assistant across the house, on the tablets, phones and PC over HTTPS.
 - The intercom between tablets and the PC.
 - The glass tablet dashboard with the screensaver.
-- Zigbee: coordinator and two repeaters, connected to Home Assistant. No sensors or
-  switches paired yet.
+- Zigbee on the ground and first floors: the coordinator on current firmware, two
+  repeaters chained up the stairwell, and one IR remote. The top floor has no
+  coverage yet.
 
 **Changed on disk but not committed**
 
@@ -407,7 +505,8 @@ connection directly, and whether intercom calls work from outside.
 
 **Open tasks**
 
-1. Pair real Zigbee devices; consider updating the dongle firmware first.
+1. Zigbee: finish renaming the two repeaters, add a repeater for the top floor, then
+   plugs and sensors floor by floor (chapter 8).
 2. Decide between the CasaOS compose file and the hand-written one, then make the
    committed file match what runs.
 3. Install or retire the start-on-boot unit (and fix its folder name).
