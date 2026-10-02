@@ -69,10 +69,17 @@ Asterisk directly.
   volume `./homeassistant:/config`, `TZ=Asia/Muscat`.
 - **mosquitto** — Eclipse Mosquitto 2, the common MQTT bus. Give it a real
   listener + authenticated user (no anonymous). Config in `./mosquitto/config`.
+  One login per client: `majlis` (HA's MQTT integration, broker `127.0.0.1:1883`)
+  and `zigbee2mqtt`. Add one with `sudo docker exec mosquitto mosquitto_passwd …`.
 - **zigbee2mqtt** — `koenkk/zigbee2mqtt`. Prefer Z2M over ZHA for device
   coverage. Pass the coordinator by its **`/dev/serial/by-id/…`** path, never
-  `ttyUSB0` (which renumbers on reboot). Talks to `mosquitto`. (Its dongle path is
-  still the `CHANGEME` placeholder.)
+  `ttyUSB0` (which renumbers on reboot): `ZIGBEE_DONGLE_PATH` in `.env`. Talks to
+  `mosquitto` (by service name, it is on the bridge network). Coordinator = **Sonoff
+  ZBDongle-P** (`adapter: zstack`), channel 20, running since 2026-10-02. Its MQTT
+  password and the Zigbee network key live in `zigbee2mqtt/data/secret.yaml`
+  (gitignored) and are referenced from `configuration.yaml` as `!secret.yaml …`, so
+  that file stays committable. Frontend (pairing): `http://192.168.100.49:8080`, no
+  login, LAN only.
 - **asterisk** — `ghcr.io/tech7fox/asterisk-hass-addon`, **pinned**, host network.
   The SIP PBX behind the intercom. Version bumps are deliberate (the project has
   had breaking releases).
@@ -243,6 +250,12 @@ Design feel, in brief:
   working between tablets and PC. Committed on branch `feat/intercom-sip`.
 - **The old PWA is removed** (this change); design refs are in `design/`.
 - Not yet verified: tab3 (203), and a tablet left idle 30+ minutes (bug #231).
+- **Zigbee is up (2026-10-02):** Z2M runs on the ZBDongle-P and HA's MQTT integration
+  is connected. Two HOBEIAN ZG-807Z USB repeaters are paired as routers ("1st Floor
+  Repeater", "Mohammeds Floor Repeater", LQI 189 / 174); no end devices yet. Pair new
+  devices near the dongle or a repeater, then move them. A stray **snap** Mosquitto
+  on the host was holding `127.0.0.1:1883` and was removed. Coordinator firmware is
+  the factory 20210708 build (old; reflash is optional and easiest before pairing).
 - The working tree still holds the owner's uncommitted CasaOS rewrite of
   `docker-compose.yml` (absolute paths, `TZ: Etc/UTC`), deliberately NOT committed;
   the committed compose is HEAD plus the `asterisk`/`caddy` services.
