@@ -458,22 +458,51 @@ that updates the Home Assistant entity ID.
 
 ---
 
-## Chapter 9 — Remote access (discussed 2 Oct, not installed)
+## Chapter 9 — Remote access (2 Oct, working)
 
-The plan is **Tailscale** installed on the laptop itself, advertising only the
-laptop's own LAN address:
+The first plan was Tailscale, but it is blocked in Oman. **Twingate** does the same
+job and is reachable from this line, so it was chosen instead. The idea is unchanged:
+your phone reaches only this server, through an encrypted tunnel. Because
+`minjihome.duckdns.org` already points at the server's LAN address, the same link and
+certificate work at home and away, and nothing in Caddy or Home Assistant changes.
+Home Assistant itself is never put on the internet, and **no port is opened on the
+router**.
 
-```
-sudo tailscale up --advertise-routes=192.168.100.49/32
-```
+What was added to `docker-compose.yml`:
 
-Your phone, with Tailscale on, then reaches `192.168.100.49` through an encrypted
-tunnel from anywhere. Because `minjihome.duckdns.org` already points at that address,
-the same link and certificate work at home and away, and nothing in Caddy, DuckDNS or
-Home Assistant changes. No port is opened on the router.
+- **`twingate`** — the "connector". It only dials out to Twingate's cloud; phones
+  running the Twingate app are then joined to it. Its three tokens live in
+  `.env.secrets`.
 
-Still to check when it is set up: whether mobile carriers in Oman pass the
-connection directly, and whether intercom calls work from outside.
+The trade-off: this depends on Twingate's cloud and on a Twingate account. If their
+service is down or gets blocked, remote access stops (the house itself keeps working).
+
+To switch it on:
+
+1. Sign up at twingate.com and pick a network name (the part before `.twingate.com`).
+2. In the admin console: Remote Networks → add one (e.g. "Home") → Add Connector →
+   Docker → generate tokens.
+3. Put the network name and the two tokens in `.env.secrets`
+   (`TWINGATE_NETWORK`, `TWINGATE_ACCESS_TOKEN`, `TWINGATE_REFRESH_TOKEN`).
+4. `sudo docker compose up -d twingate` — the connector turns green in the console.
+5. In the console, add a Resource in that network: address `192.168.100.49` (the
+   server), and give your user access. This is how it is set up now. With no port
+   restriction, a signed-in Twingate user can reach everything on the server, including
+   the Zigbee pairing page that has no login, so keep the account to the family, or
+   limit the Resource to TCP 443.
+6. Install the Twingate app on the phone, sign in with the network name, turn Wi-Fi
+   off and open `https://minjihome.duckdns.org`.
+
+**The fallback: WireGuard.** A self-hosted WireGuard server is also written into the
+compose file but switched off (it only starts with `--profile wireguard`). It needs no
+outside company, but it does need a second DuckDNS name (`WG_HOST` in `.env`) and one
+port opened on the router (UDP 51820 → `192.168.100.49`). Start it with
+`sudo docker compose --profile wireguard up -d wireguard duckdns-wg`, then
+`sudo docker exec wireguard /app/show-peer phone1` prints a QR code for the WireGuard
+app. Its keys in `wireguard/config/` are never committed.
+
+Switched on and confirmed working on 2 Oct. Still to check: whether intercom calls
+work from outside.
 
 ---
 
@@ -510,7 +539,7 @@ connection directly, and whether intercom calls work from outside.
 2. Decide between the CasaOS compose file and the hand-written one, then make the
    committed file match what runs.
 3. Install or retire the start-on-boot unit (and fix its folder name).
-4. Tailscale for remote access.
+4. Test an intercom call from outside over Twingate (chapter 9).
 5. Later: Frigate for cameras on a stronger machine; an outside phone line through
    Asterisk.
 

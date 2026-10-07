@@ -50,8 +50,8 @@ Asterisk directly.
 ~/majlis/
   docker-compose.yml        # single source of truth for the stack
   .env                      # non-secret env (TZ, PUID, SITE_HOST); committed
-  .env.secrets              # DUCKDNS_TOKEN — gitignored (.env.secrets.example = template)
-  homeassistant/            # HA config volume (NOT committed wholesale — see §9)
+  .env.secrets              # DUCKDNS_TOKEN + Twingate tokens — gitignored (.env.secrets.example = template)
+  homeassistant/            # HA config volume (NOT committed wholesale — see §9); media/ = HA media library (gitignored)
   mosquitto/config/mosquitto.conf
   zigbee2mqtt/data/configuration.yaml
   asterisk/                 # SIP PBX for the intercom (see §7)
@@ -59,6 +59,7 @@ Asterisk directly.
     generate-secrets.sh     #   writes passwords to Asterisk + SIP Core options
     config/asterisk/custom/rtp.conf   # the only tracked file under config/
   caddy/                    # HTTPS front door: Dockerfile + Caddyfile (certs gitignored)
+  wireguard/config/         # fallback VPN keys + peer profiles (all gitignored; unused so far)
   design/                   # design language: DESIGN.md + majlis-os-reference.html
   docs/PROJECT-JOURNEY.md   # chronological walkthrough for the owner: what was done and why
   systemd/majlis-compose.service
@@ -89,6 +90,30 @@ Asterisk directly.
   challenge (only renewal needs internet), proxying `/` to HA (`:8123`) and `/ws`
   to Asterisk (`:8088`). Port 80 is owned by CasaOS, so Caddy's redirect listener
   is disabled.
+- **twingate** — remote access (decided 2026-10-02: Tailscale is blocked in Oman;
+  Twingate's hosts are reachable from this line and the owner chose it "for now" over
+  self-hosted WireGuard). `twingate/connector:1` on the bridge network, outbound-only:
+  **no router port, no public DNS name**. Tokens (`TWINGATE_NETWORK`,
+  `TWINGATE_ACCESS_TOKEN`, `TWINGATE_REFRESH_TOKEN`) are in `.env.secrets`. Access is
+  configured in the Twingate admin console, not in the repo: one Resource, the
+  server's LAN IP `192.168.100.49` (set by the owner). `$SITE_HOST` resolves to that
+  IP, so the same URL and cert work at home and away and nothing in Caddy or HA
+  changes; HA is never exposed to the internet directly. This is a cloud dependency
+  (an accepted exception to local-first: no Twingate cloud = no remote access; the
+  house itself is unaffected). **Running since 2026-10-02; owner: "works perfect".**
+  Unless ports are restricted on the Resource, every Twingate user also reaches the
+  server's other ports (Z2M frontend 8080 has no login, CasaOS 80, MQTT 1883) — fine
+  while the account is family-only; restrict to TCP 443 + UDP for calls before adding
+  anyone else. Intercom from outside is untested.
+- **wireguard** + **duckdns-wg** — the **fallback**, behind compose profile
+  `wireguard` so a plain `up -d` never starts them. `lscr.io/linuxserver/wireguard`,
+  `NET_ADMIN` only; needs UDP `WG_PORT` (51820) forwarded on the router and `WG_HOST`
+  (a second DuckDNS name, kept on the public IP by the `duckdns-wg` curl loop;
+  `SITE_HOST` must stay on the LAN IP). Split tunnel: peers route just
+  `192.168.100.49/32` (not the /24 — other houses use the same range). Peers =
+  `WG_PEERS` in `.env`; profiles land in `wireguard/config/peer_<name>/`
+  (`sudo docker exec wireguard /app/show-peer <name>`). Never started. The line has a
+  real public IP (no CGNAT seen on 2026-10-02), so this is viable.
 - **Later:** `frigate` (cameras, Phase 3).
 - **HACS** (already installed) — integrations: `sip_core` (intercom UI), tuya-local,
   localtuya, xtend_tuya, hikconnect, hikvision_next, google_home, TCL and others;
@@ -155,7 +180,7 @@ Asterisk directly.
   `sip-call-card`, `sip-call-button`, plus an auto-opening incoming-call popup.
   Media is WebRTC (DTLS-SRTP), LAN only: **no STUN/TURN** (ICE servers empty; the
   Google STUN default is removed from `rtp.conf`).
-- **Extensions** (`asterisk/roster.csv`): **tablets only** — 201–203 = tab1–3 (each
+- **Extensions** (`asterisk/roster.csv`): **tablets only** — 201–205 = tab1–5 (204/205 added 2026-10-07; each
   its own HA user), 900 = shared guest (SIP Core's `backup_user`, used by any other
   HA user, e.g. the PC). Each HA user maps to one extension by HA **user id**. A
   device is reachable only while its HA page/app is open and awake.
@@ -192,9 +217,9 @@ Asterisk directly.
   the line an analog port on its router (then an ATA/FXO gateway is needed)?
 
 ## 8. Wall panels
-- 3 identical large **Android** tablets (real Android, Play Store), one per
-  floor, each running the **HA Companion app** at `https://$SITE_HOST`, logged in as
-  its own HA user (`tab1`–`tab3`), which is what maps it to extension 201–203. Not
+- Identical large **Android** tablets (real Android, Play Store; 5 as of 2026-10-07), each
+  running the **HA Companion app** at `https://$SITE_HOST`, logged in as
+  its own HA user (`tab1`–`tab5`), which is what maps it to extension 201–205. Not
   Amazon Fire (locked FireOS, ads, weak camera for video intercom).
 - Calls need HTTPS + microphone permission for the app (§7). Keep the screen on and
   the dashboard in the foreground so the SIP registration stays alive.
@@ -210,6 +235,7 @@ Asterisk directly.
 - **Secrets:** never commit. HA `secrets.yaml`, long-lived tokens, MQTT creds,
   `.env.secrets` (DuckDNS token), and everything under `asterisk/` that the
   generator or container writes (SIP/AMI passwords, TLS keys) stay out of Git.
+  `wireguard/` (VPN private keys) is ignored entirely.
   `.gitignore` excludes `homeassistant/` runtime (`*.db*`, `.storage/`,
   `secrets.yaml`), `caddy/data`, and `asterisk/config/*` except `custom/rtp.conf`.
   Commit *config structure* (compose file, dashboards/themes if YAML, automations,
@@ -255,12 +281,15 @@ Design feel, in brief:
   is connected. The server room is **under the staircase on the ground floor** and the
   house is concrete throughout: Zigbee does not cross a floor slab, only the stair
   opening. Working layout = a chain up the stairwell: dongle → repeater on the ground
-  floor ~10 m away facing the stairs (still named "1st Floor Repeater", LQI ~115) →
-  repeater on the first floor (temporarily named "Xst Floor Repeater", reaches the
-  dongle only via the first one) ; "Family Room Controller" (ZG-IR01 battery IR
-  remote) also routes via the stairs repeater. Both repeaters are HOBEIAN ZG-807Z.
-  **The rename is half done:** stairs one → e.g. "Ground Floor Stairs Repeater", then
-  "Xst…" → "1st Floor Repeater" (in that order, with the HA entity-ID option ticked).
+  floor ~10 m away facing the stairs ("Ground Floor Repeater", `0xa4c13899c48217e6`,
+  LQI ~85) → repeater on the first floor ("1st Floor Repeater", `0xa4c1389e264f103f`,
+  reaches the dongle only via the first one: its direct link is LQI 0–1, so the first
+  ping attempt every ~20 min fails and the retry succeeds — expected log noise);
+  "Family Room Controller" (ZG-IR01 battery IR remote) is a weak direct child of the
+  dongle (LQI ~20–35). Both repeaters are HOBEIAN ZG-807Z.
+  **The rename is done in Z2M (2026-10-02)** but HA's entity IDs did not follow: the
+  controller's are `switch.0xa4c138ccf9eacc41_*`, two disabled repeater sensors keep
+  old names, and the controller has no HA area yet.
   The top floor ("Mohammed's floor") has no coverage yet. Plan: one more USB repeater
   at the top-floor stair opening (+ a spare, USB extension cables), Zigbee 3.0 plugs
   as routers inside each floor, install from the dongle outward; fallback is a network
@@ -298,7 +327,9 @@ Design feel, in brief:
    contacts card on `TabletView` if not already there.
 4. Decide whether to keep the CasaOS-style compose or return to the hand-written
    one, then reconcile it with the committed file.
-5. **Later:** SIP trunk to the ISP landline for outbound calls (§7).
+5. **Remote access (§5 twingate) is up.** Left to do: test an intercom call from
+   outside; optionally restrict the Resource's ports in the Twingate console.
+6. **Later:** SIP trunk to the ISP landline for outbound calls (§7).
 
 ## 13. Guardrails for Claude Code
 - Never commit secrets or tokens (HA tokens, DuckDNS token, SIP/AMI passwords, TLS keys).
