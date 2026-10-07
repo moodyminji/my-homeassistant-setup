@@ -44,6 +44,9 @@ asterisk/media/
 caddy/data/
 caddy/config/
 
+# WireGuard runtime (server and peer private keys, QR codes)
+wireguard/
+
 # Secrets / env
 .env.secrets
 *.token
@@ -54,3 +57,6 @@ caddy/config/
 
 # Owner's UI screenshots (feedback material) — never commit
 UI Photos(No Commit)/
+
+# Theme folders installed by HACS (re-downloadable); only our own theme is committed
+homeassistant/themes/*/
