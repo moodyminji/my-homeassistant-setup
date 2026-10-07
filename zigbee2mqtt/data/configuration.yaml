@@ -32,8 +32,12 @@ availability:
   enabled: true
 devices:
   '0xa4c13899c48217e6':
-    friendly_name: 1st Floor Repeater
+    friendly_name: Ground Floor Repeater
   '0xa4c1389e264f103f':
-    friendly_name: Xst Floor Repeater
+    friendly_name: 1st Floor Repeater
   '0xa4c138ccf9eacc41':
     friendly_name: Family Room Controller
+  '0xa4c1380106c58389':
+    friendly_name: Majlis Cassette Controller
+  '0xa4c13841bbb76c5b':
+    friendly_name: '0xa4c13841bbb76c5b'

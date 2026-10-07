@@ -14,7 +14,10 @@ Majlis Glass:
   dark-primary-color: "#b37800"
   light-primary-color: "#ffd98a"
   primary-background-color: "#0c0d0f"
-  secondary-background-color: "rgba(255, 255, 255, 0.05)"
+  # SOLID on purpose: menus, dropdown popups and dialog surfaces read these tokens, and a
+  # translucent value there (no blur behind it) made them see-through and inconsistent.
+  # Glass cards are unaffected: ha-card uses ha-card-background below, not these.
+  secondary-background-color: "#1c1e22"
   primary-text-color: "#eceff1"
   secondary-text-color: "rgba(236, 239, 241, 0.58)"
   disabled-text-color: "rgba(236, 239, 241, 0.32)"
@@ -25,7 +28,7 @@ Majlis Glass:
   lovelace-background: "linear-gradient(180deg, #0c0d0f 0%, #131518 60%, #0c0d0f 100%)"
 
   # --- glass cards -----------------------------------------------------------
-  card-background-color: "rgba(255, 255, 255, 0.06)"
+  card-background-color: "#181a1e"   # solid, see note on secondary-background-color
   ha-card-background: "linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 100%)"
   ha-card-border-radius: 22px
   ha-card-border-width: 1px
@@ -47,6 +50,34 @@ Majlis Glass:
   state-climate-auto-color: "#ffc14d"
   state-lock-locked-color: "#6edc8c"
   state-lock-unlocked-color: "#ff7b72"
+
+  # --- dropdowns / inputs (ha-select, text fields, pickers) -------------------
+  md-sys-color-surface: "#181a1e"
+  input-fill-color: "rgba(255, 255, 255, 0.06)"
+  input-ink-color: "#eceff1"
+  input-label-ink-color: "rgba(236, 239, 241, 0.58)"
+  input-idle-line-color: "rgba(255, 255, 255, 0.22)"
+  input-hover-line-color: "rgba(255, 184, 26, 0.65)"
+  input-disabled-line-color: "rgba(255, 255, 255, 0.10)"
+  input-disabled-fill-color: "rgba(255, 255, 255, 0.03)"
+  input-disabled-ink-color: "rgba(236, 239, 241, 0.32)"
+  input-outlined-idle-border-color: "rgba(255, 255, 255, 0.22)"
+  input-outlined-hover-border-color: "rgba(255, 184, 26, 0.65)"
+  input-outlined-disabled-border-color: "rgba(255, 255, 255, 0.10)"
+  input-dropdown-icon-color: "rgba(236, 239, 241, 0.58)"
+
+  # --- popups / more-info dialogs ---------------------------------------------
+  # A solid dark surface with NO backdrop-filter: HA frontend #26113 shows that a dialog
+  # backdrop-filter makes dropdowns render outside the dialog (it creates a containing block
+  # for fixed-position menus). Do not add ha-dialog-surface-backdrop-filter here.
+  ha-dialog-surface-background: "#15171a"
+
+  # --- tooltips (sidebar hover hints, icon-button hover labels) ----------------
+  # ha-tooltip: text = --ha-tooltip-text-color || --primary-text-color (light here), background =
+  # --ha-tooltip-background-color || --ha-color-surface-default (HA-derived, came out light too,
+  # so the text vanished into an empty box). Pin both so it is always light-on-dark.
+  ha-tooltip-background-color: "#2a2d33"
+  ha-tooltip-text-color: "#eceff1"
 
   # --- controls --------------------------------------------------------------
   switch-checked-color: "#ffb81a"

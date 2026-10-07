@@ -12,12 +12,20 @@
 // The event needs real coordinates: at (0,0) WallPanel reads it as the "next image" touch zone
 // and ignores it. Screen centre is outside every touch zone.
 //
+// Confirmed intermittent (2026-09-22): WallPanel measures the nudge's position as a fraction of
+// its screensaver container's live layout box, so a nudge that lands while that box is still
+// mid-transition (e.g. right as the screensaver is spinning up when the call arrives) gets
+// silently dropped instead of dismissing the overlay. One nudge is a coin flip; fire a short
+// burst so a later one lands once layout has settled, on top of the 30 s heartbeat for long calls.
+//
 // Source of truth is this file; HA serves the copy in homeassistant/www/ (root-owned):
 //   sudo install -m 644 homeassistant/dashboards/majlis-call-wake.js homeassistant/www/
 // Loaded on every frontend page via `frontend: extra_module_url:` in configuration.yaml.
 
+const BURST_DELAYS_MS = [0, 250, 600, 1200, 2000];
 const NUDGE_EVERY_MS = 30000;
 let timer = null;
+let burstTimers = [];
 
 function nudge() {
   window.dispatchEvent(
@@ -29,11 +37,14 @@ function nudge() {
 }
 
 window.addEventListener("sipcore-call-started", () => {
-  nudge();
+  burstTimers.forEach(clearTimeout);
+  burstTimers = BURST_DELAYS_MS.map((delay) => setTimeout(nudge, delay));
   if (timer === null) timer = setInterval(nudge, NUDGE_EVERY_MS);
 });
 
 window.addEventListener("sipcore-call-ended", () => {
+  burstTimers.forEach(clearTimeout);
+  burstTimers = [];
   if (timer !== null) {
     clearInterval(timer);
     timer = null;

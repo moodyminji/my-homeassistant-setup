@@ -2,13 +2,19 @@
 # Loads default set of integrations. Do not remove.
 default_config:
 
+# Media library kept inside the config volume (the container has no /media mount).
+# media/screensaver/ holds the WallPanel screensaver photos.
+homeassistant:
+  media_dirs:
+    local: /config/media
+
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
   # Wakes the WallPanel screensaver when an intercom call starts (else Answer/Decline taps are
   # swallowed). Source: dashboards/majlis-call-wake.js, copied into www/ (see that file).
   extra_module_url:
-    - /local/majlis-call-wake.js?v=1
+    - /local/majlis-call-wake.js?v=2
 
 automation: !include automations.yaml
 script: !include scripts.yaml
